@@ -1,3 +1,4 @@
+import tarfile
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,6 +6,8 @@ import os
 import shutil
 
 from ai.whisper_model import transcribe_audio
+from ai.emotion_model import analyze_emotion
+
 
 app = FastAPI()
 
@@ -38,8 +41,11 @@ async def upload_audio(file: UploadFile = File(...)):
 
     transcript = transcribe_audio(filepath)
 
+    emotion = analyze_emotion(transcript)
+
     return {
         "success": True,
         "filename": file.filename,
-        "transcript": transcript
+        "transcript": transcript,
+        "emotion": emotion
     }
