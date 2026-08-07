@@ -1,7 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+
 import os
 import shutil
+
+from ai.whisper_model import transcribe_audio
 
 app = FastAPI()
 
@@ -27,13 +30,16 @@ def home():
 
 @app.post("/upload")
 async def upload_audio(file: UploadFile = File(...)):
+
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    transcript = transcribe_audio(filepath)
+
     return {
         "success": True,
         "filename": file.filename,
-        "message": "Upload Successful"
+        "transcript": transcript
     }

@@ -10,6 +10,8 @@ export default function UploadCard() {
     const [audioURL, setAudioURL] = useState(null);
     const [uploading, setUploading] = useState(false);
 
+    const [transcript, setTranscript] = useState("");
+
     async function handleFile(file) {
 
         if (!file) return;
@@ -32,6 +34,8 @@ export default function UploadCard() {
             );
 
             console.log(response.data);
+
+            setTranscript(response.data.transcript);
 
             alert("Upload Successful 🚀");
 
@@ -118,6 +122,25 @@ export default function UploadCard() {
                         src={audioURL}
                         className="w-full mt-5"
                     />
+
+                    <div className="mt-6 bg-[#11151D] p-5 rounded-xl border border-[#2A3342]">
+
+                        <h3 className="font-semibold mb-3">
+                            Whisper Transcript
+                        </h3>
+
+                        <p className="text-gray-300 whitespace-pre-wrap">
+
+                            {
+                                transcript
+                                    ? transcript
+                                    : "Waiting..."
+
+                            }
+
+                        </p>
+
+                    </div>
 
                     <button
                         disabled={uploading}
