@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { UploadCloud, Music2 } from "lucide-react";
 import API from "../../services/api";
 
-export default function UploadCard() {
+export default function UploadCard({ setAnalysis }) {
 
     const fileInputRef = useRef(null);
 
@@ -34,6 +34,8 @@ export default function UploadCard() {
             );
 
             console.log(response.data);
+
+            setAnalysis(response.data);
 
             setTranscript(response.data.transcript);
 

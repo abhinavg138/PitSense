@@ -3,8 +3,10 @@ import UploadCard from "../components/upload/UploadCard";
 import TranscriptCard from "../components/dashboard/TranscriptCard";
 import EmotionCard from "../components/dashboard/EmotionCard";
 import AISummary from "../components/dashboard/AISummary";
+import { useState } from "react";
 
 export default function Dashboard() {
+  const [analysis, setAnalysis] = useState(null);
   return (
     <div className="flex min-h-screen bg-[#090B10] text-white">
 
@@ -25,19 +27,19 @@ export default function Dashboard() {
         <div className="grid grid-cols-12 gap-6">
 
           <div className="col-span-12">
-            <UploadCard />
+            <UploadCard setAnalysis={setAnalysis} />
           </div>
 
           <div className="col-span-8">
-            <TranscriptCard />
+            <TranscriptCard analysis={analysis} />
           </div>
 
           <div className="col-span-4">
-            <EmotionCard />
+            <EmotionCard analysis={analysis} />
           </div>
 
           <div className="col-span-12">
-            <AISummary />
+            <AISummary analysis={analysis} />
           </div>
 
         </div>
