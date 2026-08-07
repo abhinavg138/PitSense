@@ -1,3 +1,6 @@
+from ai.config.racing_keywords import KEYWORDS
+
+
 def analyze_driver_state(transcript: str, emotion: dict):
 
     text = transcript.lower()
@@ -8,76 +11,24 @@ def analyze_driver_state(transcript: str, emotion: dict):
     issues = []
     recommendations = []
 
-    # ---------------- TYRES ----------------
+    for category in KEYWORDS.values():
 
-    tyre_keywords = [
-        "grip",
-        "tyre",
-        "tire",
-        "sliding",
-        "oversteer",
-        "understeer",
-        "traction",
-        "locking",
-        "rear",
-        "front"
-    ]
+        if any(word in text for word in category["words"]):
 
-    if any(word in text for word in tyre_keywords):
-        issues.append("Tyre Degradation")
-        recommendations.append("Consider an earlier pit stop for fresh tyres.")
-        stress += 25
-        urgency += 20
+            issues.append(category["issue"])
 
-    # ---------------- ENGINE ----------------
+            recommendations.append(
+                category["recommendation"]
+            )
 
-    engine_keywords = [
-        "engine",
-        "temperature",
-        "power",
-        "overheating",
-        "smoke"
-    ]
+            stress += category["stress"]
+            urgency += category["urgency"]
 
-    if any(word in text for word in engine_keywords):
-        issues.append("Engine Issue")
-        recommendations.append("Monitor telemetry and reduce engine load.")
-        stress += 30
-        urgency += 35
-
-    # ---------------- BRAKES ----------------
-
-    brake_keywords = [
-        "brake",
-        "pedal",
-        "locking"
-    ]
-
-    if any(word in text for word in brake_keywords):
-        issues.append("Brake Issue")
-        recommendations.append("Brake temperatures should be checked.")
-        stress += 25
-        urgency += 30
-
-    # ---------------- DAMAGE ----------------
-
-    damage_keywords = [
-        "crash",
-        "wall",
-        "damage",
-        "contact",
-        "spin"
-    ]
-
-    if any(word in text for word in damage_keywords):
-        issues.append("Vehicle Damage")
-        recommendations.append("Inspect the car for damage and prepare for repairs.")
-        stress += 40
-        urgency += 40
-
+    # Keep values between 0 and 100
     stress = min(stress, 100)
     urgency = min(urgency, 100)
 
+    # Determine driver state
     if urgency >= 90:
         state = "Emergency"
 
