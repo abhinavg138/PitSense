@@ -7,6 +7,7 @@ import shutil
 
 from ai.whisper_model import transcribe_audio
 from ai.emotion_model import analyze_emotion
+from ai.driver_state import analyze_driver_state
 
 
 app = FastAPI()
@@ -43,9 +44,11 @@ async def upload_audio(file: UploadFile = File(...)):
 
     emotion = analyze_emotion(transcript)
 
+    driver_state = analyze_driver_state(transcript, emotion)
     return {
         "success": True,
         "filename": file.filename,
         "transcript": transcript,
-        "emotion": emotion
+        "emotion": emotion,
+        "driver_analysis": driver_state
     }
