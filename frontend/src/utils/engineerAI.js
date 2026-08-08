@@ -15,19 +15,72 @@ export function generateLocalEngineerAnswer(sessionData, question) {
     const driver = analysis?.driver_analysis || {};
     const emotion = analysis?.emotion || {};
     const aiSummary = analysis?.ai_summary || "";
+    const telemetry = analysis?.telemetry || null;
+    const hasTelemetry = telemetry?.available === true;
 
     const tLower = transcript.toLowerCase();
 
-    // Guardrail against hallucinated telemetry requested by user
-    const unavailableKeywords = [
-        "fuel", "lap time", "sector", "gap", "tire temp", "tyre temp",
+    // Guardrail against hallucinated telemetry — only when telemetry is NOT available
+    const baseTelemetryKeywords = [
+        "fuel", "tire temp", "tyre temp",
         "brake temp", "engine temp", "oil temp", "compound", "softs",
         "mediums", "hards", "intermediates", "wets", "telemetry value", "telemetry reading"
     ];
 
+    // Only block lap/sector keywords if we genuinely have no dataset telemetry
+    const unavailableKeywords = hasTelemetry
+        ? baseTelemetryKeywords
+        : [...baseTelemetryKeywords, "lap time", "sector", "gap"];
+
     for (const kw of unavailableKeywords) {
         if (q.includes(kw) && !tLower.includes(kw)) {
             return "That information is not available in the current session.";
+        }
+    }
+
+    // ── Answer from real telemetry when available ──────────────────────────
+    if (hasTelemetry) {
+        const lap      = telemetry.lap;
+        const lapTime  = telemetry.lap_time;
+        const sector1  = telemetry.sector_1;
+        const sector2  = telemetry.sector_2;
+        const sector3  = telemetry.sector_3;
+        const topSpeed = telemetry.top_speed;
+        const lapStr   = lapTime !== null && lapTime !== undefined ? lapTime.toFixed(3) : "N/A";
+
+        if (["lap time", "laptime", "lap duration", "how fast", "how long"].some(kw => q.includes(kw))) {
+            let ans = `The lap time was ${lapStr} seconds` + (lap ? ` on Lap ${lap}` : "") + ".";
+            const sectors = [];
+            if (sector1 !== null && sector1 !== undefined) sectors.push(`Sector 1: ${sector1.toFixed(3)}s`);
+            if (sector2 !== null && sector2 !== undefined) sectors.push(`Sector 2: ${sector2.toFixed(3)}s`);
+            if (sector3 !== null && sector3 !== undefined) sectors.push(`Sector 3: ${sector3.toFixed(3)}s`);
+            if (sectors.length) ans += ` Sector breakdown — ${sectors.join(", ")}.`;
+            return ans;
+        }
+
+        if (["sector", "s1", "s2", "s3"].some(kw => q.includes(kw))) {
+            if (sector1 === null && sector2 === null && sector3 === null) {
+                return `Sector times are not available for Lap ${lap}. Overall lap time: ${lapStr}s.`;
+            }
+            const parts = [];
+            if (sector1 !== null && sector1 !== undefined) parts.push(`S1: ${sector1.toFixed(3)}s`);
+            if (sector2 !== null && sector2 !== undefined) parts.push(`S2: ${sector2.toFixed(3)}s`);
+            if (sector3 !== null && sector3 !== undefined) parts.push(`S3: ${sector3.toFixed(3)}s`);
+            return `Sector breakdown for Lap ${lap}: ${parts.join(", ")}. Lap time: ${lapStr}s.`;
+        }
+
+        if (["top speed", "max speed", "speed trap"].some(kw => q.includes(kw))) {
+            if (topSpeed !== null && topSpeed !== undefined) return `Top speed on Lap ${lap} was ${topSpeed} km/h.`;
+            return `Top speed data is not available for Lap ${lap}.`;
+        }
+
+        if (["telemetry", "what lap", "which lap", "lap number"].some(kw => q.includes(kw))) {
+            const parts = [`Lap ${lap} | Lap Time: ${lapStr}s`];
+            if (sector1 !== null && sector1 !== undefined) parts.push(`S1: ${sector1.toFixed(3)}s`);
+            if (sector2 !== null && sector2 !== undefined) parts.push(`S2: ${sector2.toFixed(3)}s`);
+            if (sector3 !== null && sector3 !== undefined) parts.push(`S3: ${sector3.toFixed(3)}s`);
+            if (topSpeed !== null && topSpeed !== undefined) parts.push(`Top: ${topSpeed} km/h`);
+            return `[FRONTEND] Telemetry received: ${parts.join(" | ")}.`;
         }
     }
 
@@ -138,7 +191,8 @@ export async function askRaceEngineer(sessionData, question) {
         question: question.trim(),
         filename: sessionData?.filename || "",
         timestamp: sessionData?.timestamp || Date.now(),
-        chat_history: sessionData?.chat || []
+        chat_history: sessionData?.chat || [],
+        telemetry: sessionData?.analysis?.telemetry || null,
     };
 
     try {

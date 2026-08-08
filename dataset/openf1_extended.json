@@ -1,0 +1,52 @@
+{
+  "lap_04.mp3": {
+    "lap_duration":        99.170,
+    "duration_sector_1":   29.464,
+    "duration_sector_2":   42.067,
+    "duration_sector_3":   27.639,
+    "i1_speed":            286,
+    "i2_speed":            258,
+    "st_speed":            284,
+    "is_pit_out_lap":      false
+  },
+  "lap_33.mp3": {
+    "lap_duration":        97.449,
+    "duration_sector_1":   null,
+    "duration_sector_2":   null,
+    "duration_sector_3":   null,
+    "i1_speed":            null,
+    "i2_speed":            null,
+    "st_speed":            null,
+    "is_pit_out_lap":      false
+  },
+  "lap_44.mp3": {
+    "lap_duration":        97.701,
+    "duration_sector_1":   null,
+    "duration_sector_2":   null,
+    "duration_sector_3":   null,
+    "i1_speed":            null,
+    "i2_speed":            null,
+    "st_speed":            null,
+    "is_pit_out_lap":      false
+  },
+  "lap_47.mp3": {
+    "lap_duration":        97.636,
+    "duration_sector_1":   null,
+    "duration_sector_2":   null,
+    "duration_sector_3":   null,
+    "i1_speed":            null,
+    "i2_speed":            null,
+    "st_speed":            null,
+    "is_pit_out_lap":      false
+  },
+  "lap_52.mp3": {
+    "lap_duration":        97.299,
+    "duration_sector_1":   null,
+    "duration_sector_2":   null,
+    "duration_sector_3":   null,
+    "i1_speed":            null,
+    "i2_speed":            null,
+    "st_speed":            null,
+    "is_pit_out_lap":      false
+  }
+}

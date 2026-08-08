@@ -402,28 +402,87 @@ def answer_engineer_question(
     ai_summary: str = "",
     question: str = "",
     filename: str = "",
-    timestamp: str = ""
+    timestamp: str = "",
+    telemetry: dict = None,
+    telemetry_context: str = "",
 ) -> str:
     """
-    Generates a professional, operational F1 Race Engineer response based ONLY on current session context.
-    Strictly avoids hallucinating unavailable telemetry data (fuel level, lap times, tyre temps, etc.).
+    Generates a professional, operational F1 Race Engineer response based on current session context.
+    When real telemetry is present, lap time / sector questions are answered from actual data.
     """
     q = (question or "").strip().lower()
     if not q:
         return "That information is not available in the current session."
 
-    # Explicit telemetry check guardrails for missing data
-    unavailable_keywords = [
-        "fuel", "lap time", "sector", "gap", "tire temp", "tyre temp",
-        "brake temp", "engine temp", "oil temp", "compound", "softs",
-        "mediums", "hards", "intermediates", "wets", "telemetry value", "telemetry reading"
-    ]
-
-    # Check if question asks about specific metrics that aren't mentioned in the transcript
     t_lower = (transcript or "").lower()
-    for kw in unavailable_keywords:
-        if kw in q and kw not in t_lower:
-            return "That information is not available in the current session."
+    has_telemetry = bool(telemetry and telemetry.get("available"))
+
+    # ── Telemetry-specific questions (only when real data exists) ──────────
+    if has_telemetry:
+        lap_num   = telemetry.get("lap")
+        lap_time  = telemetry.get("lap_time")
+        sector_1  = telemetry.get("sector_1")
+        sector_2  = telemetry.get("sector_2")
+        sector_3  = telemetry.get("sector_3")
+        top_speed = telemetry.get("top_speed")
+        i1_speed  = telemetry.get("i1_speed")
+        i2_speed  = telemetry.get("i2_speed")
+
+        lap_time_str = f"{lap_time:.3f}" if lap_time is not None else "N/A"
+
+        if any(kw in q for kw in ["lap time", "laptime", "lap duration", "how fast", "how long"]):
+            base = f"The lap time was {lap_time_str} seconds" + (f" on Lap {lap_num}" if lap_num else "") + "."
+            sectors = []
+            if sector_1 is not None:
+                sectors.append(f"Sector 1: {sector_1:.3f}s")
+            if sector_2 is not None:
+                sectors.append(f"Sector 2: {sector_2:.3f}s")
+            if sector_3 is not None:
+                sectors.append(f"Sector 3: {sector_3:.3f}s")
+            if sectors:
+                base += " Sector breakdown — " + ", ".join(sectors) + "."
+            return base
+
+        if any(kw in q for kw in ["sector", "s1", "s2", "s3"]):
+            if sector_1 is None and sector_2 is None and sector_3 is None:
+                return f"Sector times are not available for Lap {lap_num}. The overall lap time was {lap_time_str}s."
+            sector_parts = []
+            if sector_1 is not None:
+                sector_parts.append(f"Sector 1: {sector_1:.3f}s")
+            if sector_2 is not None:
+                sector_parts.append(f"Sector 2: {sector_2:.3f}s")
+            if sector_3 is not None:
+                sector_parts.append(f"Sector 3: {sector_3:.3f}s")
+            return f"Sector breakdown for Lap {lap_num}: " + ", ".join(sector_parts) + \
+                   f". Overall lap time: {lap_time_str}s."
+
+        if any(kw in q for kw in ["top speed", "max speed", "speed trap", "straight"]):
+            if top_speed is not None:
+                return f"The recorded top speed on Lap {lap_num} was {top_speed} km/h."
+            return f"Top speed data is not available for Lap {lap_num}."
+
+        if any(kw in q for kw in ["telemetry", "what lap", "which lap", "lap number"]):
+            parts = [f"Lap {lap_num} — Lap Time: {lap_time_str}s"]
+            if sector_1 is not None:
+                parts.append(f"S1: {sector_1:.3f}s")
+            if sector_2 is not None:
+                parts.append(f"S2: {sector_2:.3f}s")
+            if sector_3 is not None:
+                parts.append(f"S3: {sector_3:.3f}s")
+            if top_speed is not None:
+                parts.append(f"Top Speed: {top_speed} km/h")
+            return "Race telemetry — " + " | ".join(parts) + "."
+
+    # ── Guardrails (only when telemetry is NOT available) ─────────────────
+    if not has_telemetry:
+        unavailable_keywords = [
+            "fuel", "lap time", "sector", "gap", "tire temp", "tyre temp",
+            "brake temp", "engine temp", "oil temp", "compound", "softs",
+            "mediums", "hards", "intermediates", "wets", "telemetry value", "telemetry reading"
+        ]
+        for kw in unavailable_keywords:
+            if kw in q and kw not in t_lower:
+                return "That information is not available in the current session."
 
     state = driver_analysis.get("driver_state", "Calm")
     stress = driver_analysis.get("stress", 0)
@@ -583,8 +642,12 @@ def answer_engineer_question_with_source(
     ai_summary: str = "",
     question: str = "",
     filename: str = "",
-    timestamp: str = ""
+    timestamp: str = "",
+    telemetry_context: str = "",
+    telemetry: dict = None,
 ):
+    has_telemetry = bool(telemetry and telemetry.get("available"))
+
     deterministic_answer = answer_engineer_question(
         transcript=transcript,
         emotion=emotion,
@@ -592,10 +655,15 @@ def answer_engineer_question_with_source(
         ai_summary=ai_summary,
         question=question,
         filename=filename,
-        timestamp=timestamp
+        timestamp=timestamp,
+        telemetry=telemetry,
+        telemetry_context=telemetry_context,
     )
 
-    if deterministic_answer == MISSING_TELEMETRY_RESPONSE or is_missing_telemetry_question(question):
+    # Only block on missing-telemetry guard when we genuinely have no telemetry
+    if not has_telemetry and (
+        deterministic_answer == MISSING_TELEMETRY_RESPONSE or is_missing_telemetry_question(question)
+    ):
         return {
             "answer": MISSING_TELEMETRY_RESPONSE,
             "ai_source": "local",
@@ -605,10 +673,13 @@ def answer_engineer_question_with_source(
         transcript=transcript,
         emotion=emotion,
         driver=driver_analysis,
-        ai_summary=ai_summary
+        ai_summary=ai_summary,
+        telemetry_context=telemetry_context,
     )
     gemini_answer = generate_gemini_chat_answer(context, question)
     if gemini_answer:
+        if telemetry_context:
+            print(f"[ENGINEER] Telemetry context available for Gemini answer")
         return {
             "answer": gemini_answer,
             "ai_source": "gemini",

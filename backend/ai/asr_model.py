@@ -65,3 +65,34 @@ def transcribe_audio(filepath: str) -> str:
         os.remove(wav_path)
 
     return result["text"]
+
+
+def transcribe_and_perceive(filepath: str) -> dict:
+    """Transcribe audio and run audio-domain perception in a single WAV pass.
+
+    Converts the uploaded file to a 16 kHz mono WAV once, then runs:
+      1. Parakeet ASR          → transcript string
+      2. HF audio emotion model → per-class probabilities
+      3. Acoustic feature extraction → RMS / ZCR / non-silence ratio
+
+    The WAV is deleted in the finally block regardless of whether any step
+    fails, so no temp files accumulate.  app.py should call this function
+    instead of transcribe_audio() to get the full perception result.
+    """
+    from ai.audio_emotion import analyze_audio_emotion
+    from ai.speech_features import extract_speech_features
+
+    wav_path = _to_wav_16k_mono(filepath)
+    try:
+        transcript      = asr(wav_path)["text"]
+        audio_emotion   = analyze_audio_emotion(wav_path)
+        speech_features = extract_speech_features(wav_path)
+    finally:
+        # One delete covers all three steps — even if any of them raise.
+        os.remove(wav_path)
+
+    return {
+        "transcript":      transcript,
+        "audio_emotion":   audio_emotion,
+        "speech_features": speech_features,
+    }

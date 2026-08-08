@@ -18,7 +18,7 @@ import { useAudioRecorder } from "../../hooks/useAudioRecorder";
 
 const STEPS = [
     { key: "upload",    label: "Uploading Audio",       icon: UploadCloud },
-    { key: "whisper",   label: "Whisper Transcription", icon: Mic },
+    { key: "parakeet",  label: "HF • PARAKEET ASR",     icon: Mic },
     { key: "emotion",   label: "Emotion Detection",     icon: Sparkles },
     { key: "analysis",  label: "Driver Intelligence",   icon: Brain },
     { key: "complete",  label: "AI Race Engineer",      icon: CheckCircle2 },
@@ -148,7 +148,7 @@ export default function UploadCard({ setAnalysis }) {
             await new Promise(r => setTimeout(r, 500));
 
             setActiveStep(1);
-            setStatus("📝 Transcribing with Whisper...");
+            setStatus("📝 Transcribing with Parakeet...");
 
             const response = await API.post("/upload", formData);
 
@@ -741,7 +741,7 @@ export default function UploadCard({ setAnalysis }) {
                             <Mic size={13} style={{ color: "#0A84FF" }} />
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em]"
                                 style={{ color: "#52525B" }}>
-                                Whisper Transcript
+                                HF • PARAKEET ASR
                             </p>
                         </div>
                         <p className="text-[14px] leading-7 whitespace-pre-wrap"

@@ -53,13 +53,13 @@ def is_missing_telemetry_question(question):
     return any(keyword in q for keyword in UNAVAILABLE_TELEMETRY_KEYWORDS)
 
 
-def build_session_context(transcript, emotion, driver, ai_summary=""):
+def build_session_context(transcript, emotion, driver, ai_summary="", telemetry_context=""):
     emotion = emotion or {}
     driver = driver or {}
     stress = driver.get("stress", emotion.get("stress", 0))
     urgency = driver.get("urgency", emotion.get("urgency", 0))
 
-    return {
+    ctx = {
         "transcript": transcript or "",
         "emotion": emotion.get("emotion", "neutral"),
         "confidence": emotion.get("confidence", 0),
@@ -71,6 +71,10 @@ def build_session_context(transcript, emotion, driver, ai_summary=""):
         "risk": risk_level(urgency),
         "ai_summary": ai_summary or "",
     }
+    if telemetry_context:
+        ctx["telemetry"] = telemetry_context
+    return ctx
+
 
 
 def _get_api_key():

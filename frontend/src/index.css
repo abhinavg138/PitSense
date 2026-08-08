@@ -133,3 +133,22 @@ body,
     background: rgba(10, 132, 255, 0.04) !important;
     box-shadow: 0 0 48px rgba(10, 132, 255, 0.1), inset 0 0 48px rgba(10, 132, 255, 0.03);
 }
+
+/* ─── HUD Cockpit Utilities ─── */
+@keyframes hudWave {
+    0%, 100% { transform: scaleY(0.25); }
+    50%      { transform: scaleY(1); }
+}
+
+.hud-grid-bg {
+    background-image: 
+        radial-gradient(circle at 50% 50%, rgba(10, 132, 255, 0.1) 0%, rgba(7, 8, 13, 0.98) 80%),
+        linear-gradient(rgba(10, 132, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(10, 132, 255, 0.06) 1px, transparent 1px);
+    background-size: 100% 100%, 24px 24px, 24px 24px;
+}
+
+.hud-wave-bar {
+    animation: hudWave 1.4s ease-in-out infinite;
+    transform-origin: bottom;
+}

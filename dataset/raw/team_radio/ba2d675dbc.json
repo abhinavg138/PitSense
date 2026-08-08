@@ -1,0 +1,842 @@
+[
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T03:10:24.330000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_031001.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 16,
+    "date": "2024-03-24T03:22:11.304000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CHALEC01_16_20240324_032139.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 16,
+    "date": "2024-03-24T03:22:11.645000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CHALEC01_16_20240324_032201.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T03:24:29.907000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_032403.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T03:25:37+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_032519.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T03:26:11.201000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_032554.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T03:26:45.658000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_032615.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T03:27:55.571000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_032743.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T03:29:02.004000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_032832.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T03:30:43.203000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_033005.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T03:57:07.008000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_035631.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T03:59:56.266000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_035919.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T03:59:56.266000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_035932.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T03:59:56.266000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_035936.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T03:59:56.288000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_035941.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T03:59:56.519000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_035945.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T03:59:56.606000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_035947.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T04:02:13.579000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_040139.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:05:03.350000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_040449.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:06:47.439000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_040608.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:07:54.270000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_040732.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:09:35.592000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_040903.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:10:10.020000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_040952.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:10:43.897000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_041038.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:11:18.281000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_041044.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:11:53.369000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_041142.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:13:00.269000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_041222.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:13:00.410000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_041253.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:13:34.611000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_041312.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T04:14:08.788000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_041354.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T04:15:18.926000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_041457.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 18,
+    "date": "2024-03-24T04:16:24.371000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANSTR01_18_20240324_041615.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:17:34.259000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_041830.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:17:34.259000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_041723.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:18:41.079000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_041809.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:18:41.450000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_041823.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:18:41.643000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_041831.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T04:19:16.012000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_041852.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:19:50.012000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_041916.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:20:24.772000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042000.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:20:59.921000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042044.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 44,
+    "date": "2024-03-24T04:21:32.240000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LEWHAM01_44_20240324_042110.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:21:32.660000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_042126.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:22:06.831000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042201.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 23,
+    "date": "2024-03-24T04:23:15.270000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ALEALB01_23_20240324_042235.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:23:15.270000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_042254.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:23:50.404000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042317.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:23:50.404000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_042333.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:24:57.350000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042427.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T04:24:57.696000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_042449.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 44,
+    "date": "2024-03-24T04:26:05.752000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LEWHAM01_44_20240324_042637.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:26:05.801000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_042553.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T04:30:37.126000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_043107.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 18,
+    "date": "2024-03-24T04:31:11.678000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANSTR01_18_20240324_043045.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:32:53.003000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_043221.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:32:53.015000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_043227.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T04:32:53.246000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_043228.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T04:32:53.382000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_043230.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T04:33:28.005000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_043248.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T04:33:28.560000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_043311.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 3,
+    "date": "2024-03-24T04:34:37.304000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/DANRIC01_3_20240324_043418.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:35:44.591000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_043508.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T04:35:45.011000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_043523.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T04:36:53.096000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_043642.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:37:27.820000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_043715.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T04:39:43.168000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_043935.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 77,
+    "date": "2024-03-24T04:40:50.457000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/VALBOT01_77_20240324_044041.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 18,
+    "date": "2024-03-24T04:41:25.002000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANSTR01_18_20240324_044100.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:41:59.159000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_044134.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:42:33.702000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_044157.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:43:41.354000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_044325.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:44:15.410000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_044355.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:44:49.402000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_044531.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:44:49.878000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_044429.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:45:24.192000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_044501.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T04:45:59.314000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_044531.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:46:32.200000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_044556.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T04:46:34.429000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_044620.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 31,
+    "date": "2024-03-24T04:47:40.531000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ESTOCO01_31_20240324_044701.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:48:14.769000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_044737.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:49:22.368000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_044911.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:49:56.364000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_044918.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T04:50:30.400000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_045015.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 16,
+    "date": "2024-03-24T04:52:12.732000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CHALEC01_16_20240324_045143.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T04:52:46.667000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_045237.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 16,
+    "date": "2024-03-24T04:55:02.419000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CHALEC01_16_20240324_045441.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 16,
+    "date": "2024-03-24T04:55:36.373000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CHALEC01_16_20240324_045505.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:56:11.311000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_045538.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T04:56:46.431000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_045618.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T04:56:46.431000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_045637.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T04:57:19.009000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_045657.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:59:01.786000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_045845.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 63,
+    "date": "2024-03-24T04:59:36.859000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GEORUS01_63_20240324_045922.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:00:09.623000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_045939.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:02:27.309000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_050208.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:03:00.004000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_050236.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 20,
+    "date": "2024-03-24T05:05:49.300000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/KEVMAG01_20_20240324_050510.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:07:30.919000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_050653.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T05:07:31.026000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_050715.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:08:05.554000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_050751.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:10:20.526000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_051006.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 14,
+    "date": "2024-03-24T05:10:55.003000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/FERALO01_14_20240324_051008.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 24,
+    "date": "2024-03-24T05:12:04.192000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/GUAZHO01_24_20240324_051134.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T05:15:59.795000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_051554.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T05:16:34.878000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_051625.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:19:57.781000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_051941.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:19:57.997000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_052055.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 4,
+    "date": "2024-03-24T05:23:21.344000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/LANNOR01_4_20240324_052258.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:23:56.136000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_052429.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:26:12.240000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_052635.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:27:53.412000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_052820.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T05:28:02.700000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_052739.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 27,
+    "date": "2024-03-24T05:28:02.700000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/NICHUL01_27_20240324_052915.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 11,
+    "date": "2024-03-24T05:28:02.700000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/SERPER01_11_20240324_053031.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 77,
+    "date": "2024-03-24T05:30:43.105000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/VALBOT01_77_20240324_053059.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 55,
+    "date": "2024-03-24T05:30:43.105000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/CARSAI01_55_20240324_053244.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 22,
+    "date": "2024-03-24T05:30:43.105000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/YUKTSU01_22_20240324_053145.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 81,
+    "date": "2024-03-24T05:33:34.477000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/OSCPIA01_81_20240324_053352.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 23,
+    "date": "2024-03-24T05:33:34.477000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/ALEALB01_23_20240324_053409.mp3"
+  },
+  {
+    "meeting_key": 1231,
+    "session_key": 9488,
+    "driver_number": 10,
+    "date": "2024-03-24T05:33:34.477000+00:00",
+    "recording_url": "https://livetiming.formula1.com/static/2024/2024-03-24_Australian_Grand_Prix/2024-03-24_Race/TeamRadio/PIEGAS01_10_20240324_053613.mp3"
+  }
+]

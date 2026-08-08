@@ -57,7 +57,7 @@ export default function TranscriptCard({ analysis }) {
                 </div>
                 <div>
                     <h2 className="text-lg font-bold text-white tracking-tight">Transcript</h2>
-                    <p className="text-[11px] mt-0.5" style={{ color: "#3F3F46" }}>Whisper AI</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "#3F3F46" }}>NVIDIA Parakeet TDT 0.6B v3</p>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full"
                     style={{

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
     Cpu,
     Activity,
@@ -5,7 +6,9 @@ import {
     ArrowRight,
     Radio,
     Sparkles,
-    ShieldAlert
+    ShieldAlert,
+    Gauge,
+    Flame
 } from "lucide-react";
 
 /* ── Accent Color Helpers ── */
@@ -61,7 +64,6 @@ function extractExecutiveSummaryFromLegacyReport(text) {
             started = true;
         }
 
-        // Stop as soon as we hit the next block divider or next section header
         if (
             l.includes("━━━━") ||
             l.includes("═══") ||
@@ -94,13 +96,11 @@ function extractSituationSummary(aiSummary, driverState) {
         rawText = rawText.split("AI ENHANCED BRIEF")[0];
     }
 
-    // Isolate executive summary from legacy report string
     const execSummary = extractExecutiveSummaryFromLegacyReport(rawText);
     if (execSummary && execSummary.length >= 10) {
         return execSummary;
     }
 
-    // If text does not contain legacy report section headers or ASCII dividers, check clean text
     if (
         !rawText.includes("━━━") &&
         !rawText.includes("═══") &&
@@ -144,8 +144,49 @@ function extractAiInsight(aiSummary) {
     return "";
 }
 
+/* ── Dynamic Session-Aware Engineer Reply Synthesis ── */
+function getDynamicEngineerReply(driverState, stress, urgency, risk, issues, recommendations, rawReply) {
+    if (rawReply && typeof rawReply === "string" && rawReply.trim() && !rawReply.includes("No engineer response")) {
+        const cleanReply = rawReply.trim();
+        if (
+            !cleanReply.includes("Continue current stint.\nKeep reporting any changes") &&
+            !cleanReply.includes("Telemetry agrees with your feedback")
+        ) {
+            return cleanReply;
+        }
+    }
+
+    const issueStr = Array.isArray(issues) && issues.length ? issues.join(", ") : "";
+
+    if (risk === "CRITICAL" || driverState === "Emergency") {
+        if (issueStr) {
+            return `Copy. We see the reported issues (${issueStr}). BOX THIS LAP. Reduce unnecessary risk and return safely.`;
+        }
+        return "BOX THIS LAP. Telemetry indicates a critical event. Reduce unnecessary risk and return safely.";
+    }
+
+    if (risk === "HIGH" || driverState === "High Stress" || stress >= 70 || urgency >= 70) {
+        if (issueStr) {
+            return `Copy. We see the reported vehicle issue (${issueStr}). Reduce unnecessary risk and prepare for an earlier stop.`;
+        }
+        return "Copy. We see the degradation and high workload. Manage the car and report if the vibration or balance worsens.";
+    }
+
+    if (risk === "MODERATE" || driverState === "Concerned" || stress >= 40 || urgency >= 40) {
+        if (issueStr) {
+            return `Copy. We are monitoring ${issueStr}. Continue for now and report if the balance or vibration worsens.`;
+        }
+        return "Copy. Continue for now and report if the balance or vibration worsens.";
+    }
+
+    return "Copy. Car feedback is stable. Continue with current plan.";
+}
+
 /* ── Main Component ── */
 export default function AISummary({ analysis }) {
+    // Mode switch state local to visual presentation layer
+    const [mode, setMode] = useState("COMMAND");
+
     if (!analysis) {
         return (
             <div
@@ -175,52 +216,84 @@ export default function AISummary({ analysis }) {
         );
     }
 
+    // 1. Normalized Presentation Data Architecture
     const driver = analysis.driver_analysis || {};
     const emotion = analysis.emotion || {};
 
-    const driverState = driver.driver_state || emotion.driver_state || "Calm";
+    const rawDriverState = driver.driver_state || emotion.driver_state || "Calm";
+    const driverState = rawDriverState.toUpperCase();
     const emotionName = emotion.emotion
         ? (emotion.emotion.charAt(0).toUpperCase() + emotion.emotion.slice(1))
         : "Neutral";
 
-    const confidenceVal = emotion.confidence !== undefined && emotion.confidence !== null
+    const confidence = emotion.confidence !== undefined && emotion.confidence !== null
         ? (emotion.confidence <= 1 ? Math.round(emotion.confidence * 100) : Math.round(emotion.confidence))
         : 85;
 
-    const stressVal = driver.stress !== undefined && driver.stress !== null
+    const stress = driver.stress !== undefined && driver.stress !== null
         ? driver.stress
         : (emotion.stress !== undefined ? emotion.stress : 0);
 
-    const urgencyVal = driver.urgency !== undefined && driver.urgency !== null
+    const urgency = driver.urgency !== undefined && driver.urgency !== null
         ? driver.urgency
         : (emotion.urgency !== undefined ? emotion.urgency : 0);
 
     const issues = Array.isArray(driver.issues) ? driver.issues : [];
     const recommendations = Array.isArray(driver.recommendations) ? driver.recommendations : [];
 
-    const riskVal = (driver.risk || (urgencyVal >= 90 ? "CRITICAL" : urgencyVal >= 70 ? "HIGH" : urgencyVal >= 40 ? "MODERATE" : "LOW")).toUpperCase();
-
+    const risk = (driver.risk || (urgency >= 90 ? "CRITICAL" : urgency >= 70 ? "HIGH" : urgency >= 40 ? "MODERATE" : "LOW")).toUpperCase();
     const isEnhanced = (analysis.ai_source || "").toLowerCase() === "gemini";
+    const aiSource = isEnhanced ? "gemini" : "local";
     const sourceLabel = isEnhanced ? "AI ENHANCED" : "LOCAL ANALYSIS";
     const sourceColor = isEnhanced ? "#BF5AF2" : "#30D158";
 
-    const engineerReply = analysis.engineer_reply || driver.engineer_reply || "No engineer response available.";
-    const situationText = extractSituationSummary(analysis.ai_summary || analysis.summary, driverState);
-    const aiInsightText = extractAiInsight(analysis.ai_summary || analysis.summary);
+    const situation = extractSituationSummary(analysis.ai_summary || analysis.summary, rawDriverState);
+    const aiInsight = extractAiInsight(analysis.ai_summary || analysis.summary);
 
-    const stateColor = getStateColor(driverState);
-    const riskColor = getRiskColor(riskVal, urgencyVal);
+    const engineerReply = getDynamicEngineerReply(
+        rawDriverState,
+        stress,
+        urgency,
+        risk,
+        issues,
+        recommendations,
+        analysis.engineer_reply || driver.engineer_reply
+    );
+
+    const stateColor = getStateColor(rawDriverState);
+    const riskColor = getRiskColor(risk, urgency);
+
+    // Single normalized presentation object
+    const pData = {
+        driverState,
+        rawDriverState,
+        emotion: emotionName,
+        confidence,
+        stress,
+        urgency,
+        risk,
+        situation,
+        issues,
+        recommendations,
+        engineerReply,
+        aiSource,
+        sourceLabel,
+        sourceColor,
+        aiInsight,
+        stateColor,
+        riskColor
+    };
 
     return (
         <div className="space-y-4 animate-fade-in-up">
 
-            {/* 1. HEADER */}
+            {/* Top System Header & Physical Segmented Selector */}
             <div
-                className="rounded-2xl p-5 flex items-center justify-between transition-all duration-300"
+                className="rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 transition-all duration-300"
                 style={{
                     background: "rgba(255, 255, 255, 0.035)",
                     border: "1px solid rgba(255, 255, 255, 0.06)",
-                    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)"
+                    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.3)"
                 }}
             >
                 <div className="flex items-center gap-3.5">
@@ -243,121 +316,135 @@ export default function AISummary({ analysis }) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-3">
+                    {/* Source Badge */}
                     <div
-                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-full"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full shrink-0"
                         style={{
-                            background: `${sourceColor}14`,
-                            border: `1px solid ${sourceColor}28`
+                            background: `${pData.sourceColor}14`,
+                            border: `1px solid ${pData.sourceColor}28`
                         }}
                     >
                         <div
                             className="w-1.5 h-1.5 rounded-full animate-pulse"
-                            style={{ background: sourceColor }}
+                            style={{ background: pData.sourceColor }}
                         />
                         <span
                             className="text-[10px] font-bold tracking-wider uppercase"
-                            style={{ color: sourceColor }}
+                            style={{ color: pData.sourceColor }}
                         >
-                            {sourceLabel}
+                            {pData.sourceLabel}
                         </span>
+                    </div>
+
+                    {/* Physical-Feel Segmented Control */}
+                    <div
+                        className="flex items-center p-1 rounded-xl gap-1 shrink-0"
+                        style={{
+                            background: "#08090D",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.6)"
+                        }}
+                    >
+                        {["COMMAND", "HUD", "RACE"].map((m) => {
+                            const isActive = mode === m;
+                            return (
+                                <button
+                                    key={m}
+                                    onClick={() => setMode(m)}
+                                    className="px-3.5 py-1.5 rounded-lg text-[10px] font-extrabold tracking-wider transition-all duration-200"
+                                    style={{
+                                        background: isActive ? "linear-gradient(135deg, rgba(10, 132, 255, 0.3) 0%, rgba(10, 132, 255, 0.15) 100%)" : "transparent",
+                                        color: isActive ? "#FFFFFF" : "#A1A1AA",
+                                        border: isActive ? "1px solid rgba(10, 132, 255, 0.4)" : "1px solid transparent",
+                                        boxShadow: isActive ? "0 2px 10px rgba(10, 132, 255, 0.25)" : "none"
+                                    }}
+                                >
+                                    {m}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
 
-            {/* 2. TOP METRIC CARDS (4-Column Grid) */}
+            {/* MODE PRESENTATION RENDERING */}
+            {mode === "COMMAND" && <CommandMode data={pData} />}
+            {mode === "HUD" && <HudMode data={pData} />}
+            {mode === "RACE" && <RaceMode data={pData} />}
+
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODE 1 — COMMAND PRESENTATION
+   Apple x F1 Engineering Dashboard Aesthetic
+   ───────────────────────────────────────────────────────────── */
+function CommandMode({ data }) {
+    return (
+        <div className="space-y-4 transition-all duration-300">
+            {/* Top Metric Cards (4-Column Grid) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                {/* Driver State Card */}
                 <div
                     className="rounded-2xl p-4 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
                         DRIVER STATE
                     </span>
-                    <span
-                        className="text-lg font-extrabold uppercase tracking-tight"
-                        style={{ color: stateColor }}
-                    >
-                        {driverState}
+                    <span className="text-lg font-extrabold uppercase tracking-tight" style={{ color: data.stateColor }}>
+                        {data.driverState}
                     </span>
                 </div>
 
-                {/* Emotion Card */}
                 <div
                     className="rounded-2xl p-4 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
                         EMOTION
                     </span>
                     <div>
                         <span className="text-lg font-extrabold text-white capitalize block">
-                            {emotionName}
+                            {data.emotion}
                         </span>
                         <span className="text-[11px] font-medium text-zinc-400">
-                            {confidenceVal}% confidence
+                            {data.confidence}% confidence
                         </span>
                     </div>
                 </div>
 
-                {/* Stress Card */}
                 <div
                     className="rounded-2xl p-4 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
                         STRESS
                     </span>
-                    <span
-                        className="text-lg font-extrabold"
-                        style={{ color: stressVal >= 70 ? "#FF453A" : stressVal >= 40 ? "#FF9F0A" : "#30D158" }}
-                    >
-                        {stressVal}%
+                    <span className="text-lg font-extrabold" style={{ color: data.stress >= 70 ? "#FF453A" : data.stress >= 40 ? "#FF9F0A" : "#30D158" }}>
+                        {data.stress}%
                     </span>
                 </div>
 
-                {/* Urgency Card */}
                 <div
                     className="rounded-2xl p-4 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
                         URGENCY
                     </span>
-                    <span
-                        className="text-lg font-extrabold"
-                        style={{ color: urgencyVal >= 70 ? "#FF453A" : urgencyVal >= 40 ? "#FF9F0A" : "#30D158" }}
-                    >
-                        {urgencyVal}%
+                    <span className="text-lg font-extrabold" style={{ color: data.urgency >= 70 ? "#FF453A" : data.urgency >= 40 ? "#FF9F0A" : "#30D158" }}>
+                        {data.urgency}%
                     </span>
                 </div>
-
             </div>
 
-            {/* Row 2: Situation & Risk Assessment */}
+            {/* Row 2: Situation & Risk */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                {/* 3. SITUATION CARD */}
                 <div
                     className="lg:col-span-2 rounded-2xl p-5 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <div className="flex items-center gap-2 mb-3">
                         <Activity size={14} style={{ color: "#0A84FF" }} />
@@ -366,208 +453,145 @@ export default function AISummary({ analysis }) {
                         </span>
                     </div>
                     <p className="text-xs leading-relaxed text-zinc-200 font-normal">
-                        {situationText}
+                        {data.situation}
                     </p>
                 </div>
 
-                {/* 5. RISK ASSESSMENT CARD */}
                 <div
                     className="rounded-2xl p-5 flex flex-col justify-between"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <div className="flex items-center gap-2 mb-2">
-                        <ShieldAlert size={14} style={{ color: riskColor }} />
+                        <ShieldAlert size={14} style={{ color: data.riskColor }} />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                             RISK ASSESSMENT
                         </span>
                     </div>
-
                     <div>
                         <div className="flex items-baseline justify-between mb-2">
-                            <span className="text-xl font-extrabold uppercase tracking-tight" style={{ color: riskColor }}>
-                                {riskVal}
+                            <span className="text-xl font-extrabold uppercase tracking-tight" style={{ color: data.riskColor }}>
+                                {data.risk}
                             </span>
                             <span className="text-[11px] font-semibold text-zinc-400">
-                                Urgency {urgencyVal}%
+                                Urgency {data.urgency}%
                             </span>
                         </div>
-
-                        {/* Thin CSS Progress Bar */}
                         <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
                             <div
                                 className="h-full rounded-full transition-all duration-500"
-                                style={{
-                                    width: `${Math.min(100, Math.max(0, urgencyVal))}%`,
-                                    background: riskColor
-                                }}
+                                style={{ width: `${Math.min(100, Math.max(0, data.urgency))}%`, background: data.riskColor }}
                             />
                         </div>
                     </div>
                 </div>
-
             </div>
 
-            {/* Row 3: Detected Issues & Strategy */}
+            {/* Row 3: Detected Issues & Engineering Plan */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-                {/* 4. DETECTED ISSUES CARD */}
                 <div
                     className="rounded-2xl p-5 flex flex-col"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle size={14} style={{ color: issues.length ? "#FF9F0A" : "#30D158" }} />
+                        <AlertTriangle size={14} style={{ color: data.issues.length ? "#FF9F0A" : "#30D158" }} />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                             DETECTED ISSUES
                         </span>
                     </div>
-
-                    {issues.length > 0 ? (
+                    {data.issues.length > 0 ? (
                         <div className="space-y-2">
-                            {issues.map((issue, idx) => (
+                            {data.issues.map((issue, idx) => (
                                 <div
                                     key={idx}
                                     className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl"
-                                    style={{
-                                        background: "rgba(255, 159, 10, 0.06)",
-                                        border: "1px solid rgba(255, 159, 10, 0.12)"
-                                    }}
+                                    style={{ background: "rgba(255, 159, 10, 0.06)", border: "1px solid rgba(255, 159, 10, 0.12)" }}
                                 >
                                     <span className="text-amber-400 text-xs shrink-0">⚠</span>
-                                    <span className="text-xs font-medium text-zinc-200">
-                                        {issue}
-                                    </span>
+                                    <span className="text-xs font-medium text-zinc-200">{issue}</span>
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div
                             className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl"
-                            style={{
-                                background: "rgba(48, 209, 88, 0.06)",
-                                border: "1px solid rgba(48, 209, 88, 0.12)"
-                            }}
+                            style={{ background: "rgba(48, 209, 88, 0.06)", border: "1px solid rgba(48, 209, 88, 0.12)" }}
                         >
                             <span className="text-emerald-400 text-xs shrink-0">✓</span>
-                            <span className="text-xs font-medium text-zinc-300">
-                                No active issues detected.
-                            </span>
+                            <span className="text-xs font-medium text-zinc-300">No active issues detected.</span>
                         </div>
                     )}
                 </div>
 
-                {/* 6. STRATEGY RECOMMENDATIONS CARD */}
                 <div
                     className="rounded-2xl p-5 flex flex-col"
-                    style={{
-                        background: "rgba(255, 255, 255, 0.035)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)"
-                    }}
+                    style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
                 >
                     <div className="flex items-center gap-2 mb-3">
                         <ArrowRight size={14} style={{ color: "#30D158" }} />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                            STRATEGY
+                            ENGINEERING PLAN
                         </span>
                     </div>
-
-                    {recommendations.length > 0 ? (
+                    {data.recommendations.length > 0 ? (
                         <div className="space-y-2">
-                            {recommendations.map((rec, idx) => (
+                            {data.recommendations.map((rec, idx) => (
                                 <div
                                     key={idx}
                                     className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl"
-                                    style={{
-                                        background: "rgba(255, 255, 255, 0.02)",
-                                        border: "1px solid rgba(255, 255, 255, 0.05)"
-                                    }}
+                                    style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}
                                 >
                                     <span className="text-emerald-400 text-xs shrink-0">→</span>
-                                    <span className="text-xs font-medium text-zinc-200">
-                                        {rec}
-                                    </span>
+                                    <span className="text-xs font-medium text-zinc-200">{rec}</span>
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div
                             className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl"
-                            style={{
-                                background: "rgba(255, 255, 255, 0.02)",
-                                border: "1px solid rgba(255, 255, 255, 0.05)"
-                            }}
+                            style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}
                         >
                             <span className="text-zinc-500 text-xs shrink-0">→</span>
-                            <span className="text-xs font-medium text-zinc-400">
-                                No immediate strategy change recommended.
-                            </span>
+                            <span className="text-xs font-medium text-zinc-400">No immediate strategy change recommended.</span>
                         </div>
                     )}
                 </div>
-
             </div>
 
-            {/* 7. SUGGESTED ENGINEER REPLY (Inset Card) */}
+            {/* Radio Command Section */}
             <div
                 className="rounded-2xl p-5"
-                style={{
-                    background: "rgba(255, 255, 255, 0.035)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)"
-                }}
+                style={{ background: "rgba(255, 255, 255, 0.035)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
             >
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <Radio size={14} style={{ color: "#0A84FF" }} />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                            SUGGESTED ENGINEER REPLY
+                            RADIO COMMAND
                         </span>
                     </div>
-
                     <div
                         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-                        style={{
-                            background: `${sourceColor}14`,
-                            border: `1px solid ${sourceColor}24`
-                        }}
+                        style={{ background: `${data.sourceColor}14`, border: `1px solid ${data.sourceColor}24` }}
                     >
-                        <Radio size={10} style={{ color: sourceColor }} className="animate-pulse" />
-                        <span
-                            className="text-[9px] font-bold uppercase tracking-wider"
-                            style={{ color: sourceColor }}
-                        >
-                            {sourceLabel}
+                        <Radio size={10} style={{ color: data.sourceColor }} className="animate-pulse" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: data.sourceColor }}>
+                            {data.sourceLabel}
                         </span>
                     </div>
                 </div>
 
-                {/* Inset Card */}
-                <div
-                    className="p-4 rounded-xl"
-                    style={{
-                        background: "rgba(0, 0, 0, 0.3)",
-                        border: "1px solid rgba(255, 255, 255, 0.05)"
-                    }}
-                >
+                <div className="p-4 rounded-xl" style={{ background: "rgba(0, 0, 0, 0.35)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
                     <p className="text-xs italic leading-relaxed font-medium text-zinc-200">
-                        "{engineerReply}"
+                        "{data.engineerReply}"
                     </p>
                 </div>
             </div>
 
-            {/* 8. OPTIONAL AI EXPLANATION */}
-            {isEnhanced && aiInsightText && (
+            {/* Optional AI Explanation */}
+            {data.aiSource === "gemini" && data.aiInsight && (
                 <div
                     className="rounded-2xl p-5"
-                    style={{
-                        background: "rgba(191, 90, 242, 0.035)",
-                        border: "1px solid rgba(191, 90, 242, 0.12)"
-                    }}
+                    style={{ background: "rgba(191, 90, 242, 0.035)", border: "1px solid rgba(191, 90, 242, 0.12)" }}
                 >
                     <div className="flex items-center gap-2 mb-2.5">
                         <Sparkles size={14} style={{ color: "#BF5AF2" }} />
@@ -576,11 +600,347 @@ export default function AISummary({ analysis }) {
                         </span>
                     </div>
                     <p className="text-xs leading-relaxed text-zinc-300 font-normal">
-                        {aiInsightText}
+                        {data.aiInsight}
                     </p>
                 </div>
             )}
+        </div>
+    );
+}
 
+/* ─────────────────────────────────────────────────────────────
+   MODE 2 — HUD PRESENTATION
+   Automotive HUD / Concept-Car Cockpit Interface (SVG & CSS)
+   ───────────────────────────────────────────────────────────── */
+function HudMode({ data }) {
+    const stressAngle = (Math.min(100, Math.max(0, data.stress)) / 100) * 260;
+    const urgencyAngle = (Math.min(100, Math.max(0, data.urgency)) / 100) * 260;
+
+    return (
+        <div className="space-y-4 transition-all duration-300">
+            {/* Main Central HUD Graphic */}
+            <div
+                className="hud-grid-bg rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[320px]"
+                style={{
+                    border: "1px solid rgba(10, 132, 255, 0.22)",
+                    boxShadow: "0 0 40px rgba(10, 132, 255, 0.12)"
+                }}
+            >
+                <div className="relative z-10 w-full flex flex-col md:flex-row items-center justify-around gap-6">
+                    {/* Left Telemetry Readouts */}
+                    <div className="space-y-4 text-center md:text-left">
+                        <div>
+                            <span className="text-[9px] font-mono font-bold tracking-widest text-cyan-400 block uppercase">
+                                // STRESS LEVEL
+                            </span>
+                            <span className="text-2xl font-mono font-extrabold text-white">
+                                {data.stress}%
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-500 block uppercase">
+                                // EMOTION SPECTRUM
+                            </span>
+                            <span className="text-xs font-mono text-zinc-300 uppercase">
+                                {data.emotion} • {data.confidence}% CONF
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Central Circular Gauge (SVG) */}
+                    <div className="relative w-56 h-56 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                            {/* Outer Track Ring */}
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r="50"
+                                fill="none"
+                                stroke="rgba(255, 255, 255, 0.06)"
+                                strokeWidth="4"
+                            />
+                            {/* Stress Ring Arc */}
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r="50"
+                                fill="none"
+                                stroke={data.stateColor}
+                                strokeWidth="4"
+                                strokeDasharray="314"
+                                strokeDashoffset={314 - (314 * (stressAngle / 360))}
+                                strokeLinecap="round"
+                                className="transition-all duration-700"
+                            />
+                            {/* Inner Track Ring */}
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r="42"
+                                fill="none"
+                                stroke="rgba(255, 255, 255, 0.04)"
+                                strokeWidth="2"
+                                strokeDasharray="4 4"
+                            />
+                            {/* Urgency Ring Arc */}
+                            <circle
+                                cx="60"
+                                cy="60"
+                                r="42"
+                                fill="none"
+                                stroke={data.riskColor}
+                                strokeWidth="3"
+                                strokeDasharray="264"
+                                strokeDashoffset={264 - (264 * (urgencyAngle / 360))}
+                                strokeLinecap="round"
+                                className="transition-all duration-700"
+                            />
+                        </svg>
+
+                        {/* Central Dial Content */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2">
+                            <Gauge size={20} className="mb-1 text-cyan-400 animate-pulse" />
+                            <span className="text-xs font-mono font-black tracking-tight uppercase" style={{ color: data.stateColor, textShadow: `0 0 12px ${data.stateColor}66` }}>
+                                {data.driverState}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-400 mt-1">
+                                STRESS {data.stress}%
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right Telemetry Readouts */}
+                    <div className="space-y-4 text-center md:text-right">
+                        <div>
+                            <span className="text-[9px] font-mono font-bold tracking-widest text-cyan-400 block uppercase">
+                                // URGENCY INDEX
+                            </span>
+                            <span className="text-2xl font-mono font-extrabold text-white">
+                                {data.urgency}%
+                            </span>
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-500 block uppercase">
+                                // RISK CLASSIFICATION
+                            </span>
+                            <span className="text-xs font-mono font-bold uppercase" style={{ color: data.riskColor }}>
+                                {data.risk}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Animated CSS Audio/Radio Waveform */}
+                <div className="mt-6 flex items-end justify-center gap-1.5 h-6">
+                    {[40, 75, 30, 90, 50, 80, 45, 60, 35, 95, 70, 40].map((h, i) => (
+                        <div
+                            key={i}
+                            className="w-1 rounded-full hud-wave-bar"
+                            style={{
+                                height: `${h}%`,
+                                background: "rgba(10, 132, 255, 0.75)",
+                                animationDelay: `${(i % 5) * 0.2}s`
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* HUD Situation & Issues */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                    className="rounded-2xl p-5"
+                    style={{ background: "rgba(7, 8, 13, 0.95)", border: "1px solid rgba(10, 132, 255, 0.15)" }}
+                >
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-cyan-400 uppercase block mb-2">
+                        // CURRENT SITUATION
+                    </span>
+                    <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+                        {data.situation}
+                    </p>
+                </div>
+
+                <div
+                    className="rounded-2xl p-5"
+                    style={{ background: "rgba(7, 8, 13, 0.95)", border: "1px solid rgba(10, 132, 255, 0.15)" }}
+                >
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-amber-400 uppercase block mb-2">
+                        // ACTIVE ISSUES
+                    </span>
+                    {data.issues.length > 0 ? (
+                        <div className="space-y-1.5">
+                            {data.issues.map((iss, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs font-mono text-zinc-200">
+                                    <Flame size={12} className="text-amber-400 shrink-0" />
+                                    <span>{iss}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-xs font-mono text-emerald-400">NO ACTIVE ISSUES DETECTED</span>
+                    )}
+                </div>
+            </div>
+
+            {/* HUD Engineer Command Box */}
+            <div
+                className="rounded-2xl p-5"
+                style={{ background: "rgba(7, 8, 13, 0.95)", border: "1px solid rgba(10, 132, 255, 0.2)" }}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-cyan-400 uppercase">
+                        // ENGINEER COMMAND
+                    </span>
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">
+                        [{data.sourceLabel}]
+                    </span>
+                </div>
+                <p className="text-xs font-mono text-zinc-100 italic leading-relaxed">
+                    "{data.engineerReply}"
+                </p>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODE 3 — RACE PRESENTATION
+   F1 Pit-Wall Workstation / Motorsport Workstation Aesthetic
+   ───────────────────────────────────────────────────────────── */
+function RaceMode({ data }) {
+    return (
+        <div className="space-y-4 transition-all duration-300">
+            {/* Pit-Wall Header Banner */}
+            <div
+                className="rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                style={{ background: "#0C0D12", border: "1px solid rgba(255, 255, 255, 0.1)" }}
+            >
+                <div>
+                    <span className="text-[9px] font-bold tracking-widest text-zinc-400 uppercase block mb-0.5">
+                        RACE ENGINEERING • SESSION ANALYSIS
+                    </span>
+                    <h3 className="text-xl font-black text-white tracking-tight uppercase flex items-center gap-3">
+                        STATUS: <span style={{ color: data.stateColor }}>{data.driverState}</span>
+                    </h3>
+                </div>
+
+                <div className="flex items-center gap-4 bg-zinc-900/90 px-4 py-2 rounded-xl border border-zinc-800">
+                    <div>
+                        <span className="text-[9px] font-bold tracking-widest text-zinc-500 block uppercase">
+                            RISK LEVEL
+                        </span>
+                        <span className="text-sm font-extrabold uppercase" style={{ color: data.riskColor }}>
+                            {data.risk}
+                        </span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800" />
+                    <div>
+                        <span className="text-[9px] font-bold tracking-widest text-zinc-500 block uppercase">
+                            URGENCY
+                        </span>
+                        <span className="text-sm font-extrabold text-white">
+                            {data.urgency}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Race Grid: Driver Condition & Current Issues */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                    className="rounded-2xl p-5"
+                    style={{ background: "#0C0D12", border: "1px solid rgba(255, 255, 255, 0.08)" }}
+                >
+                    <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase block mb-3">
+                        DRIVER CONDITION
+                    </span>
+                    <div className="space-y-3 text-xs">
+                        <div className="flex justify-between py-1.5 border-b border-zinc-800/80">
+                            <span className="text-zinc-400">EMOTION</span>
+                            <span className="font-bold text-white uppercase">{data.emotion} ({data.confidence}%)</span>
+                        </div>
+                        <div className="flex justify-between py-1.5 border-b border-zinc-800/80">
+                            <span className="text-zinc-400">STRESS INDEX</span>
+                            <span className="font-bold text-white">{data.stress}%</span>
+                        </div>
+                        <div className="flex justify-between py-1.5 border-b border-zinc-800/80">
+                            <span className="text-zinc-400">URGENCY RATING</span>
+                            <span className="font-bold text-white">{data.urgency}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    className="rounded-2xl p-5"
+                    style={{ background: "#0C0D12", border: "1px solid rgba(255, 255, 255, 0.08)" }}
+                >
+                    <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase block mb-3">
+                        CURRENT ISSUES
+                    </span>
+                    {data.issues.length > 0 ? (
+                        <div className="space-y-2">
+                            {data.issues.map((iss, idx) => (
+                                <div key={idx} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
+                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                    <span className="font-bold text-white">{iss}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-emerald-400 font-semibold">
+                            NO ACTIVE ISSUES REPORTED
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Numbered Strategy Section */}
+            <div
+                className="rounded-2xl p-5"
+                style={{ background: "#0C0D12", border: "1px solid rgba(255, 255, 255, 0.08)" }}
+            >
+                <span className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase block mb-3">
+                    STRATEGY PLAN
+                </span>
+                {data.recommendations.length > 0 ? (
+                    <div className="space-y-2.5">
+                        {data.recommendations.map((rec, idx) => (
+                            <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-zinc-900 border border-zinc-800/80">
+                                <span className="text-sm font-black text-emerald-400 font-mono">
+                                    0{idx + 1}
+                                </span>
+                                <span className="text-xs font-semibold text-zinc-200">
+                                    {rec}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-400">
+                        No immediate strategy change recommended.
+                    </div>
+                )}
+            </div>
+
+            {/* Pit Wall -> Driver Box */}
+            <div
+                className="rounded-2xl p-5"
+                style={{ background: "#0C0D12", border: "1px solid rgba(255, 255, 255, 0.1)" }}
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold tracking-widest text-blue-400 uppercase">
+                        PIT WALL → DRIVER
+                    </span>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase">
+                        {data.sourceLabel}
+                    </span>
+                </div>
+                <div className="p-4 rounded-xl bg-black border border-zinc-800">
+                    <p className="text-xs font-bold text-white italic leading-relaxed">
+                        "{data.engineerReply}"
+                    </p>
+                </div>
+            </div>
         </div>
     );
 }

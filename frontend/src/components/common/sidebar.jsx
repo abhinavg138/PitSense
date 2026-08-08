@@ -372,7 +372,7 @@ export default function Sidebar({
                             style={{ background: "#30D158", boxShadow: "0 0 6px #30D158" }} />
                     </div>
                     <p className="text-[10px] leading-relaxed" style={{ color: "#3F3F46" }}>
-                        Whisper → Emotion AI → Driver Intelligence → Recommendations
+                        HF Parakeet → Emotion AI → Driver Intelligence → Recommendations
                     </p>
                 </div>
             </div>
