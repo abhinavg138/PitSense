@@ -1,5 +1,44 @@
 from ai.config.racing_keywords import KEYWORDS
 
+POSITIVE_PHRASES = [
+    "feels good",
+    "everything feels good",
+    "all good",
+    "car feels good",
+    "balance is good",
+    "balance is pretty",
+    "balance is stable",
+    "holding up well",
+    "holding well",
+    "grip is good",
+    "good grip",
+    "looks stable",
+    "stable",
+    "good pace",
+    "keep pushing",
+    "can stay out",
+    "front grip is holding",
+    "rear grip is holding",
+    "tyres look good",
+    "tyre temperatures look stable",
+]
+
+NEGATIVE_BOOST = [
+    "help",
+    "problem",
+    "emergency",
+    "losing",
+    "gone",
+    "sliding",
+    "spinning",
+    "crash",
+    "damage",
+    "overheating",
+    "temperature",
+    "power loss",
+    "engine",
+]
+
 
 def analyze_driver_state(transcript: str, emotion: dict):
 
@@ -11,24 +50,45 @@ def analyze_driver_state(transcript: str, emotion: dict):
     issues = []
     recommendations = []
 
-    for category in KEYWORDS.values():
+    positive = any(
+        phrase in text
+        for phrase in POSITIVE_PHRASES
+    )
 
-        if any(word in text for word in category["words"]):
+    if positive:
 
-            issues.append(category["issue"])
+        stress = max(stress - 25, 0)
+        urgency = max(urgency - 20, 0)
 
-            recommendations.append(
-                category["recommendation"]
-            )
+    else:
 
-            stress += category["stress"]
-            urgency += category["urgency"]
+        for category in KEYWORDS.values():
 
-    # Keep values between 0 and 100
-    stress = min(stress, 100)
-    urgency = min(urgency, 100)
+            if any(
+                word in text
+                for word in category["words"]
+            ):
 
-    # Determine driver state
+                if category["issue"] not in issues:
+
+                    issues.append(category["issue"])
+                    recommendations.append(
+                        category["recommendation"]
+                    )
+
+                stress += category["stress"]
+                urgency += category["urgency"]
+
+    for word in NEGATIVE_BOOST:
+
+        if word in text:
+
+            stress += 5
+            urgency += 5
+
+    stress = max(0, min(stress, 100))
+    urgency = max(0, min(urgency, 100))
+
     if urgency >= 90:
         state = "Emergency"
 
@@ -46,5 +106,5 @@ def analyze_driver_state(transcript: str, emotion: dict):
         "stress": stress,
         "urgency": urgency,
         "issues": issues,
-        "recommendations": recommendations
+        "recommendations": recommendations,
     }
