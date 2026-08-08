@@ -9,6 +9,8 @@ function formatTime(timestamp) {
 export default function ChatMessage({ message }) {
     const isUser = message.sender === "user";
     const timeStr = formatTime(message.timestamp);
+    const sourceLabel = message.aiSource === "gemini" ? "AI ENHANCED" : "LOCAL ANALYSIS";
+    const sourceColor = message.aiSource === "gemini" ? "#BF5AF2" : "#30D158";
 
     if (isUser) {
         return (
@@ -80,12 +82,12 @@ export default function ChatMessage({ message }) {
                             </span>
                             <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
                                 style={{
-                                    background: "rgba(48, 209, 88, 0.08)",
-                                    color: "#30D158",
-                                    border: "1px solid rgba(48, 209, 88, 0.15)"
+                                    background: `${sourceColor}14`,
+                                    color: sourceColor,
+                                    border: `1px solid ${sourceColor}24`
                                 }}
                             >
-                                TELEMETRY VERIFIED
+                                {sourceLabel}
                             </span>
                         </div>
 

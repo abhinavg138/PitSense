@@ -37,12 +37,13 @@ export default function EngineerChat({ session, onUpdateChat }) {
         setLoading(true);
 
         try {
-            const replyText = await askRaceEngineer(session, text);
+            const reply = await askRaceEngineer(session, text);
 
             const engineerMsg = {
                 id: (Date.now() + 1).toString(),
                 sender: "engineer",
-                text: replyText,
+                text: reply.text,
+                aiSource: reply.aiSource,
                 timestamp: Date.now()
             };
 
@@ -55,6 +56,7 @@ export default function EngineerChat({ session, onUpdateChat }) {
                 id: (Date.now() + 1).toString(),
                 sender: "engineer",
                 text: "That information is not available in the current session.",
+                aiSource: "local",
                 timestamp: Date.now()
             };
             onUpdateChat?.([...updatedMessagesWithUser, fallbackMsg]);

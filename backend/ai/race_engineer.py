@@ -1,4 +1,11 @@
 from datetime import datetime
+from ai.llm_summary import (
+    MISSING_TELEMETRY_RESPONSE,
+    build_session_context,
+    generate_gemini_brief,
+    generate_gemini_chat_answer,
+    is_missing_telemetry_question,
+)
 
 
 def bar(value, length=20):
@@ -524,4 +531,79 @@ def answer_engineer_question(
             f"Primary operational verdict: {engineer_reply(risk_lvl)}"
         )
 
-    return "That information is not available in the current session."
+    return "That information is not available in the current session."
+
+
+def generate_summary_with_source(transcript, emotion, driver):
+    deterministic_summary = generate_summary(transcript, emotion, driver)
+    context = build_session_context(
+        transcript=transcript,
+        emotion=emotion,
+        driver=driver,
+        ai_summary=deterministic_summary
+    )
+
+    gemini_brief = generate_gemini_brief(context)
+    if gemini_brief:
+        enhanced_summary = "\n\n".join([
+            deterministic_summary,
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "AI ENHANCED BRIEF",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            gemini_brief["summary"],
+        ])
+        return {
+            "summary": enhanced_summary,
+            "engineer_reply": gemini_brief["radio_response"],
+            "ai_source": "gemini",
+        }
+
+    return {
+        "summary": deterministic_summary,
+        "engineer_reply": engineer_reply(risk(driver.get("urgency", 0))),
+        "ai_source": "local",
+    }
+
+
+def answer_engineer_question_with_source(
+    transcript: str,
+    emotion: dict,
+    driver_analysis: dict,
+    ai_summary: str = "",
+    question: str = "",
+    filename: str = "",
+    timestamp: str = ""
+):
+    deterministic_answer = answer_engineer_question(
+        transcript=transcript,
+        emotion=emotion,
+        driver_analysis=driver_analysis,
+        ai_summary=ai_summary,
+        question=question,
+        filename=filename,
+        timestamp=timestamp
+    )
+
+    if deterministic_answer == MISSING_TELEMETRY_RESPONSE or is_missing_telemetry_question(question):
+        return {
+            "answer": MISSING_TELEMETRY_RESPONSE,
+            "ai_source": "local",
+        }
+
+    context = build_session_context(
+        transcript=transcript,
+        emotion=emotion,
+        driver=driver_analysis,
+        ai_summary=ai_summary
+    )
+    gemini_answer = generate_gemini_chat_answer(context, question)
+    if gemini_answer:
+        return {
+            "answer": gemini_answer,
+            "ai_source": "gemini",
+        }
+
+    return {
+        "answer": deterministic_answer,
+        "ai_source": "local",
+    }

@@ -7,7 +7,7 @@ import shutil
 from ai.whisper_model import transcribe_audio
 from ai.emotion_model import analyze_emotion
 from ai.driver_state import analyze_driver_state
-from ai.race_engineer import generate_summary, answer_engineer_question
+from ai.race_engineer import generate_summary_with_source, answer_engineer_question_with_source
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 
@@ -56,7 +56,7 @@ async def upload_audio(file: UploadFile = File(...)):
         transcript = transcribe_audio(filepath)
         emotion = analyze_emotion(transcript)
         driver_state = analyze_driver_state(transcript, emotion)
-        ai_summary = generate_summary(transcript, emotion, driver_state)
+        ai_brief = generate_summary_with_source(transcript, emotion, driver_state)
 
         return {
             "success": True,
@@ -64,7 +64,9 @@ async def upload_audio(file: UploadFile = File(...)):
             "transcript": transcript,
             "emotion": emotion,
             "driver_analysis": driver_state,
-            "ai_summary": ai_summary
+            "ai_summary": ai_brief["summary"],
+            "engineer_reply": ai_brief["engineer_reply"],
+            "ai_source": ai_brief["ai_source"]
         }
 
     except Exception as e:
@@ -79,7 +81,7 @@ async def upload_audio(file: UploadFile = File(...)):
 
 @app.post("/chat")
 async def chat_with_race_engineer(req: ChatRequest):
-    answer = answer_engineer_question(
+    result = answer_engineer_question_with_source(
         transcript=req.transcript or "",
         emotion=req.emotion or {},
         driver_analysis=req.driver_analysis or {},
@@ -91,5 +93,6 @@ async def chat_with_race_engineer(req: ChatRequest):
     return {
         "success": True,
         "question": req.question,
-        "answer": answer
+        "answer": result["answer"],
+        "ai_source": result["ai_source"]
     }

@@ -13,11 +13,11 @@ import {
 /* ── Reply logic ── */
 function getEngineerReply(state) {
     if (state === "Emergency")
-        return "Box this lap. We've identified a critical issue. Bring the car back safely.";
+        return "Box this lap. Bring the car back safely and avoid unnecessary risk.";
     if (state === "High Stress")
-        return "Copy. We're reviewing telemetry. Continue for now and report any changes immediately.";
+        return "Copy. Manage the car and report any changes immediately.";
     if (state === "Concerned")
-        return "Copy. Continue pushing. We'll monitor the data closely.";
+        return "Copy. Continue for now and report if the balance worsens.";
     return "Copy. Car looks good. Continue with current strategy.";
 }
 
@@ -103,6 +103,10 @@ export default function AISummary({ analysis }) {
     const driver = analysis.driver_analysis;
     const emotion = analysis.emotion;
     const replyAccent = getReplyAccent(driver.driver_state);
+    const isEnhanced = analysis.ai_source === "gemini";
+    const sourceLabel = isEnhanced ? "AI Enhanced" : "Local Analysis";
+    const sourceColor = isEnhanced ? "#BF5AF2" : "#30D158";
+    const engineerReply = analysis.engineer_reply || getEngineerReply(driver.driver_state);
 
     return (
         <div className="space-y-5 animate-fade-in-up">
@@ -144,13 +148,13 @@ export default function AISummary({ analysis }) {
 
                     <div className="flex items-center gap-2 px-4 py-2 rounded-full"
                         style={{
-                            background: "rgba(48,209,88,0.08)",
-                            border: "1px solid rgba(48,209,88,0.15)"
+                            background: `${sourceColor}14`,
+                            border: `1px solid ${sourceColor}24`
                         }}
                     >
                         <div className="w-1.5 h-1.5 rounded-full animate-pulse"
-                            style={{ background: "#30D158" }} />
-                        <span className="text-[11px] font-bold" style={{ color: "#30D158" }}>COMPLETE</span>
+                            style={{ background: sourceColor }} />
+                        <span className="text-[11px] font-bold" style={{ color: sourceColor }}>{sourceLabel}</span>
                     </div>
                 </div>
             </div>
@@ -179,6 +183,18 @@ export default function AISummary({ analysis }) {
                             </div>
                         ))}
                     </div>
+
+                    {analysis.ai_summary && (
+                        <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] mb-2"
+                                style={{ color: "#52525B" }}>
+                                Situation Brief
+                            </p>
+                            <p className="text-[13px] leading-7 whitespace-pre-wrap" style={{ color: "#D4D4D8" }}>
+                                {analysis.ai_summary}
+                            </p>
+                        </div>
+                    )}
                 </Section>
 
                 {/* Detected Issues */}
@@ -281,7 +297,7 @@ export default function AISummary({ analysis }) {
                     }}
                 >
                     <p className="text-[15px] italic leading-8 font-medium text-white">
-                        "{getEngineerReply(driver.driver_state)}"
+                        "{engineerReply}"
                     </p>
                 </div>
             </Section>

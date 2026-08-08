@@ -144,12 +144,18 @@ export async function askRaceEngineer(sessionData, question) {
     try {
         const response = await API.post("/chat", payload);
         if (response.data && response.data.answer) {
-            return response.data.answer;
+            return {
+                text: response.data.answer,
+                aiSource: response.data.ai_source || "local"
+            };
         }
     } catch (err) {
         console.warn("Backend /chat endpoint unavailable, using local Race Engineer engine:", err?.message);
     }
 
     // Fallback to deterministic local engine
-    return generateLocalEngineerAnswer(sessionData, question);
+    return {
+        text: generateLocalEngineerAnswer(sessionData, question),
+        aiSource: "local"
+    };
 }

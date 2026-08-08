@@ -79,6 +79,7 @@ AI Race Engineer
 - Python Multipart
 - Whisper for speech transcription
 - Hugging Face Transformers for emotion classification
+- Optional Gemini Flash wording layer for summaries and Race Engineer chat
 
 ### AI / Analysis
 
@@ -87,6 +88,7 @@ AI Race Engineer
 - Keyword-based racing issue detection for tyres, engine, brakes, and damage
 - Rule-based stress, urgency, risk, and driver-state scoring
 - Session-grounded Race Engineer Q&A logic
+- Optional Gemini enhancement receives only structured session context and never controls scoring or issue detection
 
 ## Project Structure
 
@@ -149,6 +151,19 @@ C:\ffmpeg-9.0-essentials_build\bin
 
 If FFmpeg is installed somewhere else, update the path in `backend/ai/whisper_model.py`.
 
+### Optional Gemini Setup
+
+PitSense works without Gemini. If `GEMINI_API_KEY` is not configured, the backend uses the deterministic local Race Engineer wording.
+
+To enable Gemini Flash wording for the AI Race Engineer summary, radio response, and chat answers, create `backend/.env` or set an environment variable:
+
+```text
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.6-flash
+```
+
+Never put the API key in the frontend. `.env` files are ignored by Git, and `.env.example` contains only empty placeholder values.
+
 ### 1. Clone the Repository
 
 ```bash
@@ -173,10 +188,7 @@ Install backend dependencies:
 
 ```bash
 pip install -r requirements.txt
-pip install openai-whisper transformers torch
 ```
-
-The additional AI packages are required because the backend imports `whisper` and `transformers`.
 
 Start the backend:
 
@@ -227,6 +239,8 @@ http://localhost:5173
 ## AI Guardrails
 
 The Race Engineer Q&A is designed to stay within the current session context. If a user asks for telemetry that is not present in the transcript or analysis, such as exact fuel levels, lap times, tyre temperatures, brake temperatures, compounds, or sector gaps, PitSense responds that the information is not available in the current session.
+
+Gemini, when enabled, is used only as a natural-language layer. The deterministic backend still calculates emotion, stress, urgency, driver state, detected issues, recommendations, and risk level. Gemini receives only a structured context object containing transcript, emotion, confidence, stress, urgency, driver state, issues, recommendations, risk, and the current summary.
 
 ## Hackathon Focus
 
