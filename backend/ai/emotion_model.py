@@ -1,6 +1,6 @@
 from transformers import pipeline
 
-# Load model once
+# Load model once at startup
 emotion_pipeline = pipeline(
     "text-classification",
     model="j-hartmann/emotion-english-distilroberta-base",
@@ -9,6 +9,16 @@ emotion_pipeline = pipeline(
 
 
 def analyze_emotion(text: str):
+    # Whisper sometimes returns empty or whitespace-only strings.
+    # The model doesn't handle that well, so fall back to neutral.
+    if not text or not text.strip():
+        return {
+            "emotion": "neutral",
+            "confidence": 100,
+            "stress": 20,
+            "urgency": 10,
+            "driver_state": "Calm"
+        }
 
     predictions = emotion_pipeline(text)[0]
 

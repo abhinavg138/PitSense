@@ -423,7 +423,8 @@ def answer_engineer_question(
     risk_lvl = risk(urgency)
 
     # 1. Driver classification / state question
-    if "classified" in q or "driver state" in q or "why" in q and ("concerned" in q or "stress" in q or "emergency" in q or "calm" in q):
+    # Parens are required here — `and` binds tighter than `or`.
+    if "classified" in q or "driver state" in q or ("why" in q and ("concerned" in q or "stress" in q or "emergency" in q or "calm" in q)):
         if state == "Concerned":
             issues_str = ", ".join(issues) if issues else "reported handling and performance variations"
             return (

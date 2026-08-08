@@ -44,8 +44,9 @@ def analyze_driver_state(transcript: str, emotion: dict):
 
     text = transcript.lower()
 
-    stress = emotion["stress"]
-    urgency = emotion["urgency"]
+    # Use .get() so a missing key doesn't crash the whole analysis
+    stress = emotion.get("stress", 20)
+    urgency = emotion.get("urgency", 10)
 
     issues = []
     recommendations = []

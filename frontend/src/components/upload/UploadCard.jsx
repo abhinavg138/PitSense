@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import {
     UploadCloud,
     CheckCircle2,
@@ -98,6 +98,7 @@ function createDemoAudioFile() {
 export default function UploadCard({ setAnalysis }) {
 
     const fileInputRef = useRef(null);
+    const audioURLRef = useRef(null);
 
     const [audioFile, setAudioFile]   = useState(null);
     const [audioURL, setAudioURL]     = useState(null);
@@ -107,6 +108,13 @@ export default function UploadCard({ setAnalysis }) {
     const [activeStep, setActiveStep] = useState(-1);
     const [isDragging, setIsDragging] = useState(false);
     const [uploadError, setUploadError] = useState(null);
+
+    // The browser keeps blob URLs alive until we explicitly revoke them.
+    useEffect(() => {
+        return () => {
+            if (audioURLRef.current) URL.revokeObjectURL(audioURLRef.current);
+        };
+    }, []);
 
     const {
         isRecording,
@@ -123,7 +131,11 @@ export default function UploadCard({ setAnalysis }) {
 
         setUploadError(null);
         setAudioFile(file);
-        setAudioURL(URL.createObjectURL(file));
+        // Revoke previous URL before creating a new one — otherwise they accumulate.
+        if (audioURLRef.current) URL.revokeObjectURL(audioURLRef.current);
+        const url = URL.createObjectURL(file);
+        audioURLRef.current = url;
+        setAudioURL(url);
 
         const formData = new FormData();
         formData.append("file", file);

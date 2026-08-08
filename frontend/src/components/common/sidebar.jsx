@@ -43,8 +43,6 @@ export default function Sidebar({
     onSelectSession,
     onDeleteSession,
     onRenameSession,
-    /* backwards compat */
-    history
 }) {
     const [editingId, setEditingId] = useState(null);
     const [editTitle, setEditTitle] = useState("");

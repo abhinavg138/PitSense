@@ -1,5 +1,4 @@
-import tarfile
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 import os
@@ -48,31 +47,34 @@ def home():
 
 @app.post("/upload")
 async def upload_audio(file: UploadFile = File(...)):
-
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
 
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    transcript = transcribe_audio(filepath)
+    try:
+        transcript = transcribe_audio(filepath)
+        emotion = analyze_emotion(transcript)
+        driver_state = analyze_driver_state(transcript, emotion)
+        ai_summary = generate_summary(transcript, emotion, driver_state)
 
-    emotion = analyze_emotion(transcript)
+        return {
+            "success": True,
+            "filename": file.filename,
+            "transcript": transcript,
+            "emotion": emotion,
+            "driver_analysis": driver_state,
+            "ai_summary": ai_summary
+        }
 
-    driver_state = analyze_driver_state(transcript, emotion)
+    except Exception as e:
+        # Surface a useful message to the frontend instead of a raw 500.
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
-    ai_summary = generate_summary(
-        transcript,
-        emotion,
-        driver_state
-    )
-    return {
-        "success": True,
-        "filename": file.filename,
-        "transcript": transcript,
-        "emotion": emotion,
-        "driver_analysis": driver_state,
-        "ai_summary": ai_summary
-    }
+    finally:
+        # Always clean up the uploaded file — we don't need it after processing.
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
 
 @app.post("/chat")

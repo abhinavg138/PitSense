@@ -79,12 +79,15 @@ export default function Dashboard() {
     const [uploadKey, setUploadKey]           = useState(0);
     const [searchQuery, setSearchQuery]       = useState("");
 
-    /* Restore active session on mount */
+    /* Restore active session on mount — clear the ID if the session no longer exists. */
     useEffect(() => {
         if (activeSessionId) {
             const session = sessions.find(s => s.id === activeSessionId);
             if (session?.analysis) {
                 setAnalysis(session.analysis);
+            } else {
+                // Session was deleted or storage is corrupted — don't keep a stale pointer.
+                setActiveSessionId(null);
             }
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
