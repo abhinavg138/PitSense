@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import shutil
 
-from ai.whisper_model import transcribe_audio
+from ai.asr_model import transcribe_audio
 from ai.emotion_model import analyze_emotion
 from ai.driver_state import analyze_driver_state
 from ai.race_engineer import generate_summary_with_source, answer_engineer_question_with_source

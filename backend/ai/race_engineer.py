@@ -40,26 +40,32 @@ def risk(urgency):
     return "LOW"
 
 
-def engineer_reply(level):
+def engineer_reply(level, driver_state="Calm", issues=None, recommendations=None):
+    issues = issues or []
+    recommendations = recommendations or []
 
-    if level == "CRITICAL":
-
+    if level == "CRITICAL" or driver_state == "Emergency":
+        if issues:
+            issues_str = ", ".join(issues[:2])
+            return f"Copy. We see the reported issues ({issues_str}). BOX THIS LAP. Reduce unnecessary risk and return safely."
         return (
             "BOX THIS LAP.\n"
             "Telemetry indicates a critical event.\n"
             "Reduce unnecessary risk and return safely."
         )
 
-    if level == "HIGH":
-
+    if level == "HIGH" or driver_state == "High Stress":
+        if issues:
+            issues_str = ", ".join(issues[:2])
+            return f"Copy. We see the reported vehicle issue ({issues_str}). Reduce unnecessary risk and prepare for an earlier stop."
         return (
-            "Copy. We are analysing telemetry.\n"
-            "Prepare for a possible strategy change.\n"
-            "Continue reporting vehicle behaviour."
+            "Copy. We see the degradation and high workload.\n"
+            "Manage the car and report if the vibration or balance worsens."
         )
 
-    if level == "MODERATE":
-
+    if level == "MODERATE" or driver_state == "Concerned":
+        if issues:
+            return f"Copy. We are monitoring {issues[0]}. Continue for now and report if the balance or vibration worsens."
         return (
             "Copy.\n"
             "Continue current stint.\n"
@@ -68,8 +74,8 @@ def engineer_reply(level):
 
     return (
         "Copy.\n"
-        "Telemetry agrees with your feedback.\n"
-        "Continue pushing."
+        "Car feedback is stable.\n"
+        "Continue with current plan."
     )
 
 
@@ -560,7 +566,12 @@ def generate_summary_with_source(transcript, emotion, driver):
 
     return {
         "summary": deterministic_summary,
-        "engineer_reply": engineer_reply(risk(driver.get("urgency", 0))),
+        "engineer_reply": engineer_reply(
+            risk(driver.get("urgency", 0)),
+            driver_state=driver.get("driver_state", "Calm"),
+            issues=driver.get("issues", []),
+            recommendations=driver.get("recommendations", [])
+        ),
         "ai_source": "local",
     }
 
