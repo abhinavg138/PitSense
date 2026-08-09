@@ -83,14 +83,21 @@ def _load_csv() -> Dict[str, Dict[str, Any]]:
                 try:
                     key = os.path.basename(audio_file).lower()
                     if key not in result:            # first row wins on duplicate
+                        lap_str = str(row.get("lap", "")).strip()
+                        lap_time_str = str(row.get("lap_time", "")).strip()
+
+                        lap_val = int(lap_str) if lap_str and lap_str.isdigit() else None
+                        lap_time_val = float(lap_time_str) if lap_time_str else None
+
                         result[key] = {
-                            "lap":        int(row["lap"]),
-                            "lap_time":   float(row["lap_time"]),
-                            "radio_time": str(row["radio_time"]).strip(),
+                            "lap":        lap_val,
+                            "lap_time":   lap_time_val,
+                            "radio_time": str(row.get("radio_time", "")).strip(),
                             "audio_file": audio_file,
                         }
                 except (ValueError, KeyError) as err:
                     logger.warning(f"[TELEMETRY] Skipping malformed CSV row {row}: {err}")
+
     except Exception as exc:
         logger.error(f"[TELEMETRY] Error reading metadata.csv: {exc}")
 
@@ -287,8 +294,9 @@ def get_simulation_samples(csv_path: Optional[str] = None) -> List[Dict[str, Any
                 if not os.path.exists(audio_path):
                     alt_path = os.path.join(_HERE, "uploads", audio_file)
                     if not os.path.exists(alt_path):
-                        logger.warning(f"[SIMULATION] Audio file missing for row: {audio_file}")
+                        logger.debug(f"[SIMULATION] Audio file missing for row: {audio_file}")
                         continue
+
 
                 def _parse_int(val):
                     try:
@@ -302,6 +310,10 @@ def get_simulation_samples(csv_path: Optional[str] = None) -> List[Dict[str, Any
                     except (ValueError, TypeError):
                         return None
 
+                data_status = str(row.get("data_status", "")).strip()
+                if data_status == "INVALID":
+                    continue
+
                 samples.append({
                     "sample_id": str(row.get("sample_id", "")).strip() or audio_file,
                     "audio_file": audio_file,
@@ -309,10 +321,14 @@ def get_simulation_samples(csv_path: Optional[str] = None) -> List[Dict[str, Any
                     "lap": _parse_int(row.get("lap")),
                     "lap_time": _parse_float(row.get("lap_time")),
                     "radio_time": str(row.get("radio_time", "")).strip(),
+                    "driver_number": _parse_int(row.get("driver_number")),
                     "driver_name": str(row.get("driver_name", "")).strip(),
                     "team_name": str(row.get("team_name", "")).strip(),
                     "grand_prix": str(row.get("grand_prix", "")).strip(),
                     "year": _parse_int(row.get("year")),
+                    "match_method": str(row.get("match_method", "interval")).strip(),
+                    "data_status": data_status or ("TELEMETRY_LINKED" if row.get("lap_time") else "RADIO_ONLY"),
+                    "radio_to_lap_start_seconds": _parse_float(row.get("radio_to_lap_start_seconds")),
                 })
 
         # Sort samples chronologically: radio_time (ISO str) -> lap -> filename
@@ -322,6 +338,7 @@ def get_simulation_samples(csv_path: Optional[str] = None) -> List[Dict[str, Any
             return (rt, lap, s.get("audio_file") or "")
 
         samples.sort(key=_sort_key)
+
     except Exception as exc:
         logger.error(f"[SIMULATION] Error discovering dataset samples: {exc}")
 
