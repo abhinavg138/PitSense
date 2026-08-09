@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, Header, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 import os
 import shutil
@@ -21,8 +23,14 @@ from ai.temporal_engine import (
 from ai.temporal_analysis import analyze_temporal_session
 from ai.decision_engine import evaluate_engineer_decision
 from ai.recommendation_engine import generate_actionable_insight
-from dataset_loader import get_telemetry_for_file, run_dataset_validation, build_telemetry_context_string
+from dataset_loader import (
+    get_telemetry_for_file,
+    run_dataset_validation,
+    build_telemetry_context_string,
+    get_simulation_samples,
+)
 from pydantic import BaseModel
+
 
 
 class ChatRequest(BaseModel):
@@ -37,6 +45,8 @@ class ChatRequest(BaseModel):
     telemetry: Optional[Dict[str, Any]] = None
 
 
+DATASET_AUDIO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dataset", "audio"))
+
 app = FastAPI()
 
 app.add_middleware(
@@ -46,6 +56,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if os.path.exists(DATASET_AUDIO_DIR):
+    app.mount("/dataset/audio", StaticFiles(directory=DATASET_AUDIO_DIR), name="dataset_audio")
 
 UPLOAD_FOLDER = "uploads"
 
@@ -65,6 +78,27 @@ def validate_dataset():
     Validation endpoint to verify dataset loading for expected samples.
     """
     return run_dataset_validation()
+
+
+@app.get("/simulation/samples")
+def list_simulation_samples():
+    """
+    Returns available dataset observations for simulation mode, dynamically discovered.
+    """
+    return get_simulation_samples()
+
+
+@app.get("/simulation/audio/{filename}")
+def get_simulation_audio(filename: str):
+    """
+    Returns audio file for simulation playback.
+    """
+    path = os.path.join(DATASET_AUDIO_DIR, filename)
+    if not os.path.exists(path):
+        path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(path)
 
 
 @app.post("/upload")

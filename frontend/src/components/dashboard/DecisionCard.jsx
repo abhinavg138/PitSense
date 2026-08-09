@@ -20,16 +20,14 @@ export default function DecisionCard({ analysis }) {
     const temporal = analysis.temporal_analysis || {};
     const decision = analysis.engineer_decision || {};
 
-    const available = temporal.available === true;
-    const sampleCount = temporal.sample_count || 1;
-
+    const sampleCount = temporal.sample_count || temporal.observation_count || 1;
     const badge = getSeverityBadge(decision.severity || "CALM");
     const reasons = decision.reasons || [];
     const recText = decision.recommendation || "Maintain current stint plan.";
     const decisionName = (decision.decision || "NO_ACTION").replace(/_/g, " ");
 
-    const stressTrend = temporal.stress_trend || "STABLE";
-    const stressHistory = temporal.stress_history || [];
+    const stressTrend = temporal.stress_trend || temporal.trend || "STABLE";
+    const stressHistory = temporal.stress_history || temporal.recent_stress || [];
     const lapTime = temporal.current_lap_time;
     const lapDelta = temporal.lap_time_delta;
     const perfDir = temporal.performance_direction || "STABLE";
@@ -62,7 +60,7 @@ export default function DecisionCard({ analysis }) {
                             Engineer Decision Support Engine
                         </h2>
                         <p className="text-[11px]" style={{ color: "#71717A" }}>
-                            Phase 7 & 8 — Temporal Stress & Deterministic Race Engineering
+                            Phase 8 — Authoritative Deterministic Race Engineering
                         </p>
                     </div>
                 </div>
@@ -86,31 +84,31 @@ export default function DecisionCard({ analysis }) {
                 <div className="flex items-start justify-between">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] mb-1" style={{ color: "#71717A" }}>
-                            Recommended Decision
+                            Recommended Engineer Decision
                         </p>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tight" style={{ color: badge.color }}>
+                        <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: badge.color }}>
                             {decisionName}
                         </h3>
-                        <p className="text-sm mt-2 font-medium" style={{ color: "#E4E4E7" }}>
+                        <p className="text-sm mt-2 font-medium text-zinc-200">
                             {recText}
                         </p>
                     </div>
                     <div className="text-right shrink-0 ml-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#71717A" }}>Decision Confidence</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#71717A" }}>Engine Confidence</p>
                         <p className="text-2xl font-extrabold tabular-nums" style={{ color: badge.color }}>
-                            {int( (decision.confidence || 0.85) * 100 )}%
+                            {Math.round((decision.confidence || 0.85) * 100)}%
                         </p>
                     </div>
                 </div>
 
-                {/* Explainable Reasons */}
+                {/* Decision Reasons (WHY?) */}
                 {reasons.length > 0 && (
                     <div className="mt-4 pt-4 space-y-1.5" style={{ borderTop: `1px solid ${badge.color}15` }}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#A1A1AA" }}>
-                            Decision Rationale:
+                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-300">
+                            WHY? (Backend Deterministic Reasons)
                         </p>
                         {reasons.map((r, i) => (
-                            <p key={i} className="text-xs flex items-center gap-2" style={{ color: "#D4D4D8" }}>
+                            <p key={i} className="text-xs flex items-center gap-2 text-zinc-300">
                                 <span style={{ color: badge.color }}>•</span> {r}
                             </p>
                         ))}
@@ -126,7 +124,7 @@ export default function DecisionCard({ analysis }) {
                     <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#71717A" }}>
                         Stress Trend
                     </p>
-                    {sampleCount >= 2 ? (
+                    {sampleCount >= 2 && stressHistory.length > 0 ? (
                         <div>
                             <div className="flex items-center gap-1 text-xs font-semibold tabular-nums mb-2 text-zinc-300">
                                 {stressHistory.map((s, idx) => (
@@ -158,13 +156,13 @@ export default function DecisionCard({ analysis }) {
                     <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#71717A" }}>
                         Lap Time vs Baseline
                     </p>
-                    {lapTime ? (
+                    {lapTime !== null && lapTime !== undefined ? (
                         <div>
                             <p className="text-base font-extrabold text-white tabular-nums">
-                                {lapTime.toFixed(3)} s
+                                {Number(lapTime).toFixed(3)} s
                             </p>
                             <p className="text-xs font-semibold mt-1" style={{ color: perfDir === "SLOWER" ? "#FF453A" : perfDir === "FASTER" ? "#30D158" : "#A1A1AA" }}>
-                                {lapDelta !== null && lapDelta !== undefined ? `${lapDelta > 0 ? "+" : ""}${lapDelta.toFixed(3)}s` : "Baseline"} ({perfDir})
+                                {lapDelta !== null && lapDelta !== undefined ? `${lapDelta > 0 ? "+" : ""}${Number(lapDelta).toFixed(3)}s` : "Baseline"} ({perfDir})
                             </p>
                         </div>
                     ) : (
@@ -183,7 +181,7 @@ export default function DecisionCard({ analysis }) {
                                 r = {correlation > 0 ? "+" : ""}{correlation}
                             </p>
                             <p className="text-[10px] font-bold uppercase tracking-wider mt-1 text-zinc-400">
-                                {corrStrength} CORRELATION
+                                {corrStrength || "MODERATE"} CORRELATION
                             </p>
                         </div>
                     ) : (
@@ -201,8 +199,4 @@ export default function DecisionCard({ analysis }) {
             </p>
         </div>
     );
-}
-
-function int(val) {
-    return Math.round(val);
 }

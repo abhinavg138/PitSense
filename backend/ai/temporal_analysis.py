@@ -1,26 +1,51 @@
 """
 temporal_analysis.py
 --------------------
-Phase 7 — Temporal Stress & Lap-Time Correlation Engine
+Consolidated PitSense Temporal & Lap Correlation Engine
 
-Calculates:
-- Current vs previous stress & 3-lap stress change
-- Rolling stress average & stress trend (RISING / FALLING / STABLE)
-- Consecutive rising stress count
-- Rolling lap-time baseline & lap-time delta vs baseline (+0.42s = SLOWER)
-- Performance direction (SLOWER / FASTER / STABLE) & performance trend (DETERIORATING / IMPROVING / STABLE)
-- Consecutive deteriorating performance count
-- Pearson correlation coefficient & strength (STRONG / MODERATE / WEAK / NONE)
-- Observational association statement (strictly non-causal language)
+Tracks driver stress over time within a session, calculates multi-lap stress trends,
+correlates driver stress against actual lap performance data, and produces explainable
+decision support metrics.
+
+DATA INTEGRITY GUARANTEE:
+Never fabricates lap numbers, lap times, or historical observations.
+If data is missing or insufficient, explicit availability flags are returned.
 """
 
 import math
 from typing import Dict, List, Optional, Any
 
 # Configurable Thresholds
-STRESS_TREND_THRESHOLD = 5       # abs(stress_change) >= 5 triggers RISING/FALLING
-PERFORMANCE_TREND_THRESHOLD = 0.2 # abs(lap_delta) >= 0.2s triggers SLOWER/FASTER
-MIN_CORRELATION_POINTS = 3       # minimum paired observations for Pearson correlation
+STRESS_TREND_THRESHOLD = 5          # abs(stress_change) >= 5 triggers RISING/FALLING
+PERFORMANCE_TREND_THRESHOLD = 0.2    # abs(lap_delta) >= 0.2s triggers SLOWER/FASTER
+MIN_CORRELATION_POINTS = 3          # minimum paired observations for Pearson correlation
+SUSTAINED_STRESS_THRESHOLD = 60     # minimum stress level for sustained elevated stress
+
+
+class SessionManager:
+    """In-memory session history store."""
+
+    def __init__(self):
+        self._sessions: Dict[str, List[Dict[str, Any]]] = {}
+
+    def get_history(self, session_id: str) -> List[Dict[str, Any]]:
+        return self._sessions.get(session_id, [])
+
+    def add_observation(self, session_id: str, observation: Dict[str, Any]):
+        if session_id not in self._sessions:
+            self._sessions[session_id] = []
+        self._sessions[session_id].append(observation)
+
+    def reset_session(self, session_id: str):
+        if session_id in self._sessions:
+            self._sessions[session_id] = []
+
+    def reset_all(self):
+        self._sessions.clear()
+
+
+# Global in-memory session manager instance
+session_manager = SessionManager()
 
 
 def pearson_correlation(x: List[float], y: List[float]) -> Optional[float]:
@@ -48,12 +73,12 @@ def pearson_correlation(x: List[float], y: List[float]) -> Optional[float]:
 
 def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Performs Phase 7 temporal analysis across a session's history records.
+    Performs comprehensive temporal analysis across a session's history records.
 
     Each record expects:
     - lap (int or None)
     - lap_time_seconds (float or None) or lap_time
-    - stress (int/float)
+    - stress (int/float) or stress_index
     - confidence (float)
     - timestamp (str)
     """
@@ -63,7 +88,12 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {
             "available": False,
             "sample_count": 0,
+            "observation_count": 0,
             "reason": "Building temporal picture…",
+            "trend": "INSUFFICIENT_DATA",
+            "stress_trend": "STABLE",
+            "sustained_stress": False,
+            "association": "Building temporal picture…",
         }
 
     # Extract stress timeline
@@ -95,6 +125,13 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
             consecutive_rising_stress += 1
         else:
             break
+
+    # Sustained stress detection
+    sustained_stress = False
+    if sample_count >= 3:
+        sustained_stress = all(s >= SUSTAINED_STRESS_THRESHOLD for s in stresses[-3:])
+    elif sample_count >= 2:
+        sustained_stress = (consecutive_rising_stress >= 2 and current_stress >= SUSTAINED_STRESS_THRESHOLD)
 
     # Extract lap performance timeline (filter non-null lap times)
     lap_records = []
@@ -189,6 +226,7 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {
         "available": True,
         "sample_count": sample_count,
+        "observation_count": sample_count,
         "current_lap": current_lap,
         "current_stress": current_stress,
         "previous_stress": previous_stress,
@@ -196,7 +234,10 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "stress_change_3_laps": stress_change_3_laps,
         "rolling_stress": rolling_stress,
         "stress_trend": stress_trend,
+        "trend": stress_trend,  # Backward compatible key for recommendation engine
         "consecutive_rising_stress": consecutive_rising_stress,
+        "sustained_stress": sustained_stress,
+        "recent_stress": stresses[-3:],
         "current_lap_time": current_lap_time,
         "previous_lap_time": previous_lap_time,
         "rolling_lap_time": rolling_lap_time,
@@ -209,3 +250,141 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "association": association,
         "stress_history": stresses[-4:],
     }
+
+
+def analyze_temporal_stress(history: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Wrapper calling analyze_temporal_session for stress analysis."""
+    return analyze_temporal_session(history)
+
+
+def analyze_lap_performance(history: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Correlate stress against actual lap performance data when available."""
+    lap_obs = [
+        obs for obs in history
+        if obs.get("lap") is not None and (obs.get("lap_time_seconds") is not None or obs.get("lap_time") is not None)
+    ]
+
+    if not lap_obs:
+        return {
+            "available": False,
+            "reason": "No lap-time data available for this session",
+        }
+
+    laps_summary = []
+    for obs in lap_obs:
+        lt = obs.get("lap_time_seconds") if obs.get("lap_time_seconds") is not None else obs.get("lap_time")
+        laps_summary.append({
+            "lap": obs.get("lap"),
+            "lap_time_seconds": float(lt) if lt is not None else None,
+            "stress": obs.get("stress", obs.get("stress_index", 0)),
+        })
+
+    lap_time_delta_seconds = None
+    stress_change = None
+    if len(lap_obs) >= 2:
+        curr_lt = lap_obs[-1].get("lap_time_seconds", lap_obs[-1].get("lap_time"))
+        prev_lt = lap_obs[-2].get("lap_time_seconds", lap_obs[-2].get("lap_time"))
+        if curr_lt is not None and prev_lt is not None:
+            lap_time_delta_seconds = round(float(curr_lt) - float(prev_lt), 3)
+        curr_s = lap_obs[-1].get("stress", lap_obs[-1].get("stress_index", 0))
+        prev_s = lap_obs[-2].get("stress", lap_obs[-2].get("stress_index", 0))
+        stress_change = curr_s - prev_s
+
+    stresses = [obs.get("stress", obs.get("stress_index", 0)) for obs in lap_obs]
+    lap_times = [float(obs.get("lap_time_seconds", obs.get("lap_time", 0))) for obs in lap_obs]
+
+    correlation = None
+    correlation_available = False
+    corr_reason = None
+
+    if len(lap_obs) >= MIN_CORRELATION_POINTS:
+        r = pearson_correlation(stresses, lap_times)
+        if r is not None:
+            correlation = r
+            correlation_available = True
+        else:
+            corr_reason = "Zero variance in stress or lap time observations"
+    else:
+        corr_reason = "Insufficient paired observations"
+
+    interpretation = _generate_interpretation(
+        stress_change=stress_change,
+        lap_time_delta=lap_time_delta_seconds,
+        correlation=correlation,
+        correlation_available=correlation_available
+    )
+
+    result = {
+        "available": True,
+        "laps": laps_summary,
+        "lap_time_delta_seconds": lap_time_delta_seconds,
+        "stress_change": stress_change,
+        "correlation": correlation,
+        "correlation_available": correlation_available,
+        "interpretation": interpretation,
+    }
+
+    if not correlation_available:
+        result["reason"] = corr_reason
+
+    return result
+
+
+def _generate_interpretation(
+    stress_change: Optional[float],
+    lap_time_delta: Optional[float],
+    correlation: Optional[float],
+    correlation_available: bool,
+) -> str:
+    """Generate a deterministic interpretation based strictly on actual data."""
+    if stress_change is not None and lap_time_delta is not None:
+        if stress_change > 0 and lap_time_delta > 0.1:
+            return "Stress increased alongside slower lap times."
+        elif stress_change > 0 and abs(lap_time_delta) <= 0.1:
+            return "Stress increased, but no corresponding lap-time deterioration was observed."
+        elif stress_change < 0 and lap_time_delta < -0.1:
+            return "Lower stress coincided with improved lap performance."
+        elif stress_change < 0 and lap_time_delta > 0.1:
+            return "Driver stress decreased while lap times slowed."
+
+    if correlation_available and correlation is not None:
+        if abs(correlation) < 0.3:
+            return "No strong association between stress and lap time was observed."
+        elif correlation >= 0.7:
+            return "Strong positive correlation observed: higher stress corresponds with slower lap times."
+        elif correlation <= -0.7:
+            return "Strong negative correlation observed: higher stress corresponds with faster lap times."
+
+    return "Insufficient lap performance history to establish a clear trend."
+
+
+def generate_engineering_insight(
+    temporal: Dict[str, Any],
+    lap_perf: Dict[str, Any],
+    driver_state: Dict[str, Any],
+) -> str:
+    """Generate a deterministic decision support insight for the race engineer."""
+    trend = temporal.get("trend", temporal.get("stress_trend", "INSUFFICIENT_DATA"))
+    sustained = temporal.get("sustained_stress", False)
+    issues = driver_state.get("issues", [])
+    lap_delta = lap_perf.get("lap_time_delta_seconds") or temporal.get("lap_time_delta")
+
+    if (sustained or driver_state.get("stress", 0) >= 70) and issues:
+        issues_str = ", ".join(issues[:2])
+        return f"Sustained high driver stress coincides with reported vehicle concerns ({issues_str}). Consider pit-wall intervention."
+
+    if trend == "RISING" and lap_delta is not None and lap_delta > 0.2:
+        return "Sustained stress increased alongside slower lap times. Consider radio intervention."
+
+    if (sustained or driver_state.get("stress", 0) >= 60) and (lap_delta is None or abs(lap_delta) <= 0.2):
+        return "Driver stress is elevated, but lap performance remains stable. Continue monitoring."
+
+    if driver_state.get("stress", 0) < 40 and (lap_delta is None or lap_delta <= 0.1):
+        return "Driver stress and lap performance remain stable. No intervention recommended."
+
+    if trend == "RISING":
+        return "Driver stress trend is rising across recent communications. Monitor closely."
+    elif trend == "FALLING":
+        return "Driver stress levels are stabilizing. Maintain stint plan."
+
+    return "Session data baseline established. Awaiting further driver communications."

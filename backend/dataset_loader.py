@@ -258,6 +258,76 @@ def build_telemetry_context_string(telemetry: Optional[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+# ── Simulation Sample Discovery ──────────────────────────────────────────────
+
+def get_simulation_samples(csv_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Dynamically discovers available audio observations from metadata.csv and dataset/audio/.
+    Does not hardcode sample lists; reads metadata dynamically and verifies audio file existence.
+    Sorts chronologically using radio_time or lap number.
+    """
+    target = csv_path or get_metadata_csv_path()
+    audio_dir = os.path.join(_DATASET_DIR, "audio")
+    samples: List[Dict[str, Any]] = []
+
+    if not os.path.exists(target):
+        logger.warning(f"[SIMULATION] metadata.csv not found at: {target}")
+        return samples
+
+    try:
+        with open(target, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                audio_file = str(row.get("audio_file", "")).strip()
+                if not audio_file:
+                    continue
+
+                # Check if audio file exists in dataset/audio/ or uploads/
+                audio_path = os.path.join(audio_dir, audio_file)
+                if not os.path.exists(audio_path):
+                    alt_path = os.path.join(_HERE, "uploads", audio_file)
+                    if not os.path.exists(alt_path):
+                        logger.warning(f"[SIMULATION] Audio file missing for row: {audio_file}")
+                        continue
+
+                def _parse_int(val):
+                    try:
+                        return int(val) if val is not None and val != "" else None
+                    except (ValueError, TypeError):
+                        return None
+
+                def _parse_float(val):
+                    try:
+                        return float(val) if val is not None and val != "" else None
+                    except (ValueError, TypeError):
+                        return None
+
+                samples.append({
+                    "sample_id": str(row.get("sample_id", "")).strip() or audio_file,
+                    "audio_file": audio_file,
+                    "filename": audio_file,
+                    "lap": _parse_int(row.get("lap")),
+                    "lap_time": _parse_float(row.get("lap_time")),
+                    "radio_time": str(row.get("radio_time", "")).strip(),
+                    "driver_name": str(row.get("driver_name", "")).strip(),
+                    "team_name": str(row.get("team_name", "")).strip(),
+                    "grand_prix": str(row.get("grand_prix", "")).strip(),
+                    "year": _parse_int(row.get("year")),
+                })
+
+        # Sort samples chronologically: radio_time (ISO str) -> lap -> filename
+        def _sort_key(s):
+            rt = s.get("radio_time") or ""
+            lap = s.get("lap") or 0
+            return (rt, lap, s.get("audio_file") or "")
+
+        samples.sort(key=_sort_key)
+    except Exception as exc:
+        logger.error(f"[SIMULATION] Error discovering dataset samples: {exc}")
+
+    return samples
+
+
 # ── Validation ───────────────────────────────────────────────────────────────
 
 def run_dataset_validation(csv_path: Optional[str] = None) -> Dict[str, Any]:

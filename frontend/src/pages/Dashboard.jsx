@@ -5,14 +5,14 @@ import EmotionCard from "../components/dashboard/EmotionCard";
 import AISummary from "../components/dashboard/AISummary";
 import TelemetryCard from "../components/dashboard/TelemetryCard";
 import DecisionCard from "../components/dashboard/DecisionCard";
+import SimulationControls from "../components/dashboard/SimulationControls";
 import EngineerChat from "../components/engineer/EngineerChat";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Activity,
     Brain,
     Zap,
     TrendingUp,
-    Radio
 } from "lucide-react";
 import {
     loadSessions,
@@ -21,6 +21,11 @@ import {
     saveActiveSessionId,
     generateTitle
 } from "../utils/sessions";
+import API, {
+    fetchSimulationSamples,
+    fetchSimulationAudioBlob,
+    resetBackendSession,
+} from "../services/api";
 
 /* ── Stat color helper ── */
 function getStatColor(key, value) {
@@ -81,25 +86,45 @@ export default function Dashboard() {
     const [uploadKey, setUploadKey]           = useState(0);
     const [searchQuery, setSearchQuery]       = useState("");
 
-    /* Restore active session on mount — clear the ID if the session no longer exists. */
+    /* ── Race Simulation state ── */
+    const [mode, setMode]                     = useState("manual"); // "manual" | "simulation"
+    const [samples, setSamples]               = useState([]);
+    const [currentIndex, setCurrentIndex]     = useState(0);
+    const [simulationState, setSimulationState] = useState("idle"); // "idle" | "running" | "paused" | "completed"
+    const [delaySeconds, setDelaySeconds]     = useState(2);
+    const [isProcessing, setIsProcessing]     = useState(false);
+    const timerRef                            = useRef(null);
+
+    /* Fetch simulation samples when entering simulation mode */
+    useEffect(() => {
+        if (mode === "simulation" && samples.length === 0) {
+            fetchSimulationSamples()
+                .then(data => {
+                    setSamples(data || []);
+                })
+                .catch(err => {
+                    console.error("Failed to load simulation samples:", err);
+                });
+        }
+    }, [mode, samples.length]);
+
+    /* Restore active session on mount */
     useEffect(() => {
         if (activeSessionId) {
             const session = sessions.find(s => s.id === activeSessionId);
             if (session?.analysis) {
                 setAnalysis(session.analysis);
             } else {
-                // Session was deleted or storage is corrupted — don't keep a stale pointer.
                 setActiveSessionId(null);
             }
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    /* Persist sessions */
+    /* Persist sessions & activeSessionId */
     useEffect(() => {
         saveSessions(sessions);
     }, [sessions]);
 
-    /* Persist active session ID */
     useEffect(() => {
         saveActiveSessionId(activeSessionId);
     }, [activeSessionId]);
@@ -107,7 +132,7 @@ export default function Dashboard() {
     /* Active Session Object */
     const activeSession = sessions.find(s => s.id === activeSessionId) || null;
 
-    /* ── Handlers ── */
+    /* Handlers for manual mode */
     const handleAnalysis = useCallback((data) => {
         setAnalysis(data);
 
@@ -161,8 +186,143 @@ export default function Dashboard() {
         );
     }, [activeSessionId]);
 
+    /* ── Simulation processing engine ── */
+    const processSampleAtIndex = useCallback(async (idx, sampleList) => {
+        const targetList = sampleList || samples;
+        if (!targetList || idx < 0 || idx >= targetList.length) {
+            setSimulationState("completed");
+            return null;
+        }
+
+        setIsProcessing(true);
+        const sample = targetList[idx];
+
+        try {
+            const blob = await fetchSimulationAudioBlob(sample.filename);
+            const formData = new FormData();
+            formData.append("file", blob, sample.filename);
+            formData.append("session_id", "simulation_session");
+            if (sample.lap !== null && sample.lap !== undefined) {
+                formData.append("lap", sample.lap.toString());
+            }
+            if (sample.lap_time !== null && sample.lap_time !== undefined) {
+                formData.append("lap_time_seconds", sample.lap_time.toString());
+            }
+
+            const res = await API.post("/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+
+            const data = res.data;
+            setAnalysis(data);
+
+            // Record as session item for sidebar
+            const sessionObj = {
+                id: `sim_${Date.now()}_${idx}`,
+                title: `[Sim] Lap ${sample.lap || idx + 1} - ${sample.driver_name || sample.filename}`,
+                timestamp: Date.now(),
+                transcript: data.transcript || "",
+                analysis: data,
+                chat: []
+            };
+
+            setSessions(prev => [sessionObj, ...prev.filter(s => s.id !== sessionObj.id)]);
+            setActiveSessionId(sessionObj.id);
+            return data;
+        } catch (err) {
+            console.error(`Simulation processing error on sample ${sample.filename}:`, err);
+            return null;
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [samples]);
+
+    /* Clear simulation timer */
+    const clearSimTimer = useCallback(() => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    /* Simulation Control Callbacks */
+    const handleStartSimulation = useCallback(async () => {
+        clearSimTimer();
+        let currentSamples = samples;
+        if (currentSamples.length === 0) {
+            try {
+                currentSamples = await fetchSimulationSamples();
+                setSamples(currentSamples);
+            } catch (err) {
+                console.error("Failed to load simulation samples:", err);
+                return;
+            }
+        }
+
+        if (simulationState === "paused") {
+            setSimulationState("running");
+            // Schedule next step from current index + 1
+            if (currentIndex + 1 < currentSamples.length) {
+                timerRef.current = setTimeout(async () => {
+                    const nextIdx = currentIndex + 1;
+                    setCurrentIndex(nextIdx);
+                    await processSampleAtIndex(nextIdx, currentSamples);
+                }, delaySeconds * 1000);
+            } else {
+                setSimulationState("completed");
+            }
+        } else {
+            // Fresh start or restart
+            await resetBackendSession("simulation_session");
+            setCurrentIndex(0);
+            setSimulationState("running");
+            await processSampleAtIndex(0, currentSamples);
+        }
+    }, [clearSimTimer, currentIndex, delaySeconds, processSampleAtIndex, samples, simulationState]);
+
+    const handlePauseSimulation = useCallback(() => {
+        clearSimTimer();
+        setSimulationState("paused");
+    }, [clearSimTimer]);
+
+    const handleNextSimulation = useCallback(async () => {
+        clearSimTimer();
+        if (currentIndex + 1 < samples.length) {
+            const nextIdx = currentIndex + 1;
+            setCurrentIndex(nextIdx);
+            await processSampleAtIndex(nextIdx, samples);
+        } else {
+            setSimulationState("completed");
+        }
+    }, [clearSimTimer, currentIndex, processSampleAtIndex, samples]);
+
+    const handleResetSimulation = useCallback(async () => {
+        clearSimTimer();
+        await resetBackendSession("simulation_session");
+        setCurrentIndex(0);
+        setSimulationState("idle");
+        setAnalysis(null);
+    }, [clearSimTimer]);
+
+    /* Auto-advance effect when simulationState === "running" and processing completes */
+    useEffect(() => {
+        if (simulationState === "running" && !isProcessing && samples.length > 0) {
+            if (currentIndex < samples.length - 1) {
+                timerRef.current = setTimeout(async () => {
+                    const nextIdx = currentIndex + 1;
+                    setCurrentIndex(nextIdx);
+                    await processSampleAtIndex(nextIdx, samples);
+                }, delaySeconds * 1000);
+            } else {
+                setSimulationState("completed");
+            }
+        }
+        return () => clearSimTimer();
+    }, [simulationState, isProcessing, currentIndex, samples, delaySeconds, processSampleAtIndex, clearSimTimer]);
+
     const emotion = analysis?.emotion;
     const driver  = analysis?.driver_analysis;
+    const currentSample = samples[currentIndex] || null;
 
     return (
         <div className="flex min-h-screen" style={{ background: "#09090B" }}>
@@ -194,7 +354,7 @@ export default function Dashboard() {
                             PitSense
                         </h1>
                         <p className="text-[13px] mt-0.5" style={{ color: "#52525B" }}>
-                            AI-Powered Race Intelligence — Real-time Driver Communication Analysis
+                            AI-Powered Race Intelligence — Driver Communication & Telemetry Analysis
                         </p>
                     </div>
 
@@ -215,42 +375,61 @@ export default function Dashboard() {
                 {/* ── Content ── */}
                 <div className="px-12 py-10 space-y-8">
 
+                    {/* Simulation Controls Component */}
+                    <SimulationControls
+                        mode={mode}
+                        setMode={setMode}
+                        simulationState={simulationState}
+                        onStart={handleStartSimulation}
+                        onPause={handlePauseSimulation}
+                        onNext={handleNextSimulation}
+                        onReset={handleResetSimulation}
+                        delaySeconds={delaySeconds}
+                        setDelaySeconds={setDelaySeconds}
+                        currentIndex={currentIndex}
+                        totalSamples={samples.length}
+                        currentSample={currentSample}
+                        isProcessing={isProcessing}
+                    />
+
                     {/* Stat cards (visible after analysis) */}
-                    {analysis && (
+                    {analysis && driver && emotion && (
                         <div className="grid grid-cols-4 gap-5">
                             <StatCard
                                 icon={Brain}
                                 label="Emotion"
-                                value={emotion.emotion}
+                                value={emotion.emotion || "Nominal"}
                                 color="#BF5AF2"
                                 delay={0}
                             />
                             <StatCard
                                 icon={Activity}
                                 label="Driver State"
-                                value={driver.driver_state}
+                                value={driver.driver_state || "Calm"}
                                 color="#0A84FF"
                                 delay={60}
                             />
                             <StatCard
                                 icon={Zap}
                                 label="Stress"
-                                value={`${driver.stress}%`}
-                                color={getStatColor("stress", driver.stress)}
+                                value={`${driver.stress || 0}%`}
+                                color={getStatColor("stress", driver.stress || 0)}
                                 delay={120}
                             />
                             <StatCard
                                 icon={TrendingUp}
                                 label="Urgency"
-                                value={`${driver.urgency}%`}
-                                color={getStatColor("urgency", driver.urgency)}
+                                value={`${driver.urgency || 0}%`}
+                                color={getStatColor("urgency", driver.urgency || 0)}
                                 delay={180}
                             />
                         </div>
                     )}
 
-                    {/* Upload card */}
-                    <UploadCard key={uploadKey} setAnalysis={handleAnalysis} />
+                    {/* Upload card (Manual Mode) */}
+                    {mode === "manual" && (
+                        <UploadCard key={uploadKey} setAnalysis={handleAnalysis} />
+                    )}
 
                     {/* Driver Status + Transcript */}
                     {analysis && (
@@ -260,7 +439,7 @@ export default function Dashboard() {
                         </div>
                     )}
 
-                    {/* Race Telemetry Card — always shown after first analysis */}
+                    {/* Race Telemetry Card */}
                     {analysis && <TelemetryCard analysis={analysis} />}
 
                     {/* Engineer Decision Support Engine Card */}
