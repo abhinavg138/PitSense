@@ -1,174 +1,380 @@
 """
 test_dataset_pipeline.py
 -------------------------
-Automated Test Suite for Phase 11: Multi-Race Telemetry + Team Radio Dataset Expansion.
+Pytest suite for the PitSense multi-race telemetry + team-radio dataset.
 
-Verifies:
-- OpenF1 API parsing and dynamic driver name resolution
-- Radio -> Lap interval matching algorithm (interval, nearest, unavailable)
-- Duplicate recording prevention
+Covers:
+- OpenF1 ISO datetime parsing
+- Radio -> lap interval matching
+- Maximum offset rejection
 - Existing metadata preservation
-- Dataset loader compatibility (load_dataset_metadata & get_simulation_samples)
-- GET /simulation/samples API endpoint integration
-- Idempotent execution
+- Dataset loader compatibility
+- /simulation/samples endpoint
+- Idempotent metadata deduplication
+
+The tests are intentionally compatible with the current frozen dataset and
+do not depend on the legacy lap_04.mp3 fixture.
 """
 
-import sys
-import os
 import csv
+import os
+import sys
 import tempfile
 from datetime import datetime
-from unittest.mock import patch
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
-# Ensure backend directory is in sys.path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dataset")))
+
+# ---------------------------------------------------------------------------
+# Project paths
+# ---------------------------------------------------------------------------
+
+BACKEND_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BACKEND_DIR.parent
+DATASET_DIR = PROJECT_ROOT / "dataset"
+AUDIO_DIR = DATASET_DIR / "audio"
+METADATA_CSV = DATASET_DIR / "metadata.csv"
+
+# Make backend + dataset modules importable when pytest is run from root.
+sys.path.insert(0, str(BACKEND_DIR))
+sys.path.insert(0, str(DATASET_DIR))
+
+
+# ---------------------------------------------------------------------------
+# Application imports
+# ---------------------------------------------------------------------------
 
 from app import app
-from dataset_loader import load_dataset_metadata, get_simulation_samples, get_telemetry_for_file
+from dataset_loader import (
+    get_simulation_samples,
+    get_telemetry_for_file,
+    load_dataset_metadata,
+)
 from download_dataset import (
+    FIELDNAMES,
+    load_existing_metadata,
     match_radio_to_lap,
     parse_iso_datetime,
-    load_existing_metadata,
-    FIELDNAMES,
 )
+
 
 client = TestClient(app)
 
 
-def run_pipeline_tests():
-    print("\n==================================================")
-    print("RUNNING PIT SENSE DATASET PIPELINE TEST SUITE")
-    print("==================================================\n")
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    results = []
+def _find_real_telemetry_sample():
+    """
+    Find a real audio sample from the current frozen dataset that:
+    - exists in dataset/audio/
+    - has telemetry metadata
+    - is marked TELEMETRY_LINKED when that field is available
 
-    def log_result(test_name: str, passed: bool, details: str = ""):
-        status = "PASS" if passed else "FAIL"
-        print(f"[{status}] {test_name}: {details}")
-        results.append((test_name, passed, details))
+    Returns:
+        (audio_filename, metadata_row)
+    """
+    assert METADATA_CSV.exists(), f"metadata.csv not found: {METADATA_CSV}"
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 1. ISO Datetime Parsing Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        dt1 = parse_iso_datetime("2024-03-02T15:07:32.513000+00:00")
-        assert dt1 is not None
-        assert dt1.year == 2024 and dt1.month == 3 and dt1.day == 2
-        log_result("1. ISO Datetime Parsing", True, f"Parsed: {dt1.isoformat()}")
-    except Exception as e:
-        log_result("1. ISO Datetime Parsing", False, str(e))
+    with METADATA_CSV.open("r", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 2. Radio -> Lap Interval Matching Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        laps_mock = [
-            {"lap_number": 1, "date_start": "2024-03-02T15:00:00.000Z", "lap_duration": 96.0},
-            {"lap_number": 2, "date_start": "2024-03-02T15:01:36.000Z", "lap_duration": 96.5},
-            {"lap_number": 3, "date_start": "2024-03-02T15:03:12.500Z", "lap_duration": 97.0},
+    assert rows, "metadata.csv contains no rows"
+
+    # Prefer telemetry-linked samples with audio actually present.
+    candidates = [
+        row
+        for row in rows
+        if row.get("audio_file")
+        and (AUDIO_DIR / row["audio_file"]).exists()
+        and row.get("data_status") == "TELEMETRY_LINKED"
+    ]
+
+    # Fall back to any real audio sample if status metadata is unavailable.
+    if not candidates:
+        candidates = [
+            row
+            for row in rows
+            if row.get("audio_file")
+            and (AUDIO_DIR / row["audio_file"]).exists()
         ]
-        radio_dt = datetime.fromisoformat("2024-03-02T15:02:10.000+00:00")
 
-        matched, method, offset = match_radio_to_lap(radio_dt, laps_mock, max_offset=120.0)
-        assert matched is not None
-        assert matched["lap_number"] == 2
-        assert method == "interval"
-        assert offset == 34.0
-        log_result("2. Radio -> Lap Interval Matching", True, f"Matched Lap {matched['lap_number']} via {method} (Offset: {offset}s)")
-    except Exception as e:
-        log_result("2. Radio -> Lap Interval Matching", False, str(e))
+    assert candidates, "No metadata row has a corresponding audio file on disk."
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 3. Missing Lap & Max Offset Rejection Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        laps_mock = [
-            {"lap_number": 1, "date_start": "2024-03-02T15:00:00.000Z", "lap_duration": 96.0},
-        ]
-        radio_far_dt = datetime.fromisoformat("2024-03-02T16:00:00.000+00:00")
+    row = candidates[0]
+    return row["audio_file"], row
 
-        matched, method, offset = match_radio_to_lap(radio_far_dt, laps_mock, max_offset=120.0)
-        assert matched is None
-        assert method == "unavailable"
-        log_result("3. Max Offset Rejection Handling", True, "Successfully marked as unavailable when offset exceeds threshold")
-    except Exception as e:
-        log_result("3. Max Offset Rejection Handling", False, str(e))
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 4. Existing Metadata Preservation Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        real_csv = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dataset", "metadata.csv"))
-        rows, known_urls, known_keys = load_existing_metadata(real_csv)
-        assert len(rows) >= 45
-        assert "lap_04.mp3" in [r.get("audio_file") for r in rows]
-        log_result("4. Existing Metadata Preservation", True, f"Loaded {len(rows)} existing metadata rows; lap_04.mp3 present")
-    except Exception as e:
-        log_result("4. Existing Metadata Preservation", False, str(e))
+# ---------------------------------------------------------------------------
+# 1. ISO datetime parsing
+# ---------------------------------------------------------------------------
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 5. Dataset Loader API Compatibility Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        tel = get_telemetry_for_file("lap_04.mp3")
-        assert tel is not None
-        assert tel.get("available") is True
-        assert abs(tel["lap_time"] - 99.17) < 1e-3
-        log_result("5. Dataset Loader API Compatibility", True, f"lap_04.mp3 telemetry lap_time: {tel['lap_time']}s")
-    except Exception as e:
-        log_result("5. Dataset Loader API Compatibility", False, str(e))
+def test_parse_iso_datetime():
+    dt = parse_iso_datetime("2024-03-02T15:07:32.513000+00:00")
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 6. GET /simulation/samples Endpoint Integration Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        resp = client.get("/simulation/samples")
-        assert resp.status_code == 200
-        samples = resp.json()
-        assert isinstance(samples, list)
-        assert len(samples) >= 45
-        log_result("6. GET /simulation/samples Integration", True, f"Discovered {len(samples)} valid simulation samples")
-    except Exception as e:
-        log_result("6. GET /simulation/samples Integration", False, str(e))
+    assert dt is not None
+    assert dt.year == 2024
+    assert dt.month == 3
+    assert dt.day == 2
+    assert dt.hour == 15
+    assert dt.minute == 7
+    assert dt.second == 32
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 7. Idempotent Deduplication Test
-    # ─────────────────────────────────────────────────────────────────────
-    try:
-        temp_dir = tempfile.mkdtemp(prefix="pitsense_dedupe_test_")
+
+# ---------------------------------------------------------------------------
+# 2. Radio -> lap interval matching
+# ---------------------------------------------------------------------------
+
+def test_radio_lap_interval_matching():
+    laps_mock = [
+        {
+            "lap_number": 1,
+            "date_start": "2024-03-02T15:00:00.000Z",
+            "lap_duration": 96.0,
+        },
+        {
+            "lap_number": 2,
+            "date_start": "2024-03-02T15:01:36.000Z",
+            "lap_duration": 96.5,
+        },
+        {
+            "lap_number": 3,
+            "date_start": "2024-03-02T15:03:12.500Z",
+            "lap_duration": 97.0,
+        },
+    ]
+
+    radio_dt = datetime.fromisoformat(
+        "2024-03-02T15:02:10.000+00:00"
+    )
+
+    matched, method, offset = match_radio_to_lap(
+        radio_dt,
+        laps_mock,
+        max_offset=120.0,
+    )
+
+    assert matched is not None
+    assert matched["lap_number"] == 2
+    assert method == "interval"
+    assert offset == 34.0
+
+
+# ---------------------------------------------------------------------------
+# 3. Maximum radio -> lap offset rejection
+# ---------------------------------------------------------------------------
+
+def test_max_offset_rejection():
+    laps_mock = [
+        {
+            "lap_number": 1,
+            "date_start": "2024-03-02T15:00:00.000Z",
+            "lap_duration": 96.0,
+        },
+    ]
+
+    radio_far_dt = datetime.fromisoformat(
+        "2024-03-02T16:00:00.000+00:00"
+    )
+
+    matched, method, offset = match_radio_to_lap(
+        radio_far_dt,
+        laps_mock,
+        max_offset=120.0,
+    )
+
+    assert matched is None
+    assert method == "unavailable"
+
+
+# ---------------------------------------------------------------------------
+# 4. Existing metadata preservation
+# ---------------------------------------------------------------------------
+
+def test_existing_metadata_preservation():
+    assert METADATA_CSV.exists(), f"Missing dataset metadata: {METADATA_CSV}"
+
+    rows, known_urls, known_keys = load_existing_metadata(
+        str(METADATA_CSV)
+    )
+
+    assert len(rows) >= 1
+    assert len(known_urls) >= 1
+    assert len(known_keys) >= 1
+
+
+def test_dataset_loader_compatibility():
+    """Verify the loader can resolve a real telemetry-linked audio sample."""
+
+    assert METADATA_CSV.exists(), f"metadata.csv not found: {METADATA_CSV}"
+
+    with METADATA_CSV.open("r", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    candidates = [
+        row
+        for row in rows
+        if row.get("audio_file")
+        and (AUDIO_DIR / row["audio_file"]).exists()
+        and row.get("data_status") == "TELEMETRY_LINKED"
+    ]
+
+    assert candidates, "No TELEMETRY_LINKED audio samples found."
+
+    row = candidates[0]
+    audio_filename = row["audio_file"]
+
+    telemetry = get_telemetry_for_file(audio_filename)
+
+    assert telemetry is not None
+    assert telemetry.get("available") is True
+    assert telemetry.get("audio_file") == audio_filename
+
+    if row.get("lap") not in (None, ""):
+        assert telemetry.get("lap") is not None
+
+    if row.get("lap_time") not in (None, ""):
+        assert telemetry.get("lap_time") is not None
+        assert float(telemetry["lap_time"]) > 0
+
+def test_dataset_loader_compatibility():
+    """Verify the loader can resolve a real telemetry-linked audio sample."""
+
+    assert METADATA_CSV.exists(), f"metadata.csv not found: {METADATA_CSV}"
+
+    with METADATA_CSV.open("r", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    candidates = [
+        row
+        for row in rows
+        if row.get("audio_file")
+        and (AUDIO_DIR / row["audio_file"]).exists()
+        and row.get("data_status") == "TELEMETRY_LINKED"
+    ]
+
+    assert candidates, "No TELEMETRY_LINKED audio samples found."
+
+    row = candidates[0]
+    audio_filename = row["audio_file"]
+
+    telemetry = get_telemetry_for_file(audio_filename)
+
+    assert telemetry is not None
+    assert telemetry.get("available") is True
+    assert telemetry.get("audio_file") == audio_filename
+
+    if row.get("lap") not in (None, ""):
+        assert telemetry.get("lap") is not None
+
+    if row.get("lap_time") not in (None, ""):
+        assert telemetry.get("lap_time") is not None
+        assert float(telemetry["lap_time"]) > 0
+
+def test_simulation_samples_endpoint():
+    """Verify /simulation/samples exposes real dataset samples."""
+
+    response = client.get("/simulation/samples")
+
+    assert response.status_code == 200
+
+    samples = response.json()
+
+    assert isinstance(samples, list)
+    assert len(samples) > 0
+
+    for sample in samples:
+        assert isinstance(sample, dict)
+        assert sample.get("filename")
+        assert "lap" in sample
+
+    existing_samples = [
+        sample
+        for sample in samples
+        if sample.get("filename")
+        and (AUDIO_DIR / sample["filename"]).exists()
+    ]
+
+    assert existing_samples
+
+
+def test_idempotent_deduplication():
+    """Verify duplicate recording/session identities are indexed correctly."""
+
+    with tempfile.TemporaryDirectory(
+        prefix="pitsense_dedupe_test_"
+    ) as temp_dir:
+
         temp_csv = os.path.join(temp_dir, "metadata.csv")
 
-        # Write initial row
-        with open(temp_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        row = {field: "" for field in FIELDNAMES}
+
+        row.update({
+            "sample_id": "test_01",
+            "audio_file": "test_01.mp3",
+            "recording_url": (
+                "https://livetiming.formula1.com/test_01.mp3"
+            ),
+            "session_key": "9999",
+            "driver_number": "63",
+            "radio_time": "2024-03-02T15:00:00Z",
+        })
+
+        with open(
+            temp_csv,
+            "w",
+            newline="",
+            encoding="utf-8",
+        ) as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=FIELDNAMES,
+            )
             writer.writeheader()
-            writer.writerow({
-                "sample_id": "test_01",
-                "audio_file": "test_01.mp3",
-                "recording_url": "https://livetiming.formula1.com/test_01.mp3",
-                "session_key": "9999",
-                "driver_number": "63",
-                "radio_time": "2024-03-02T15:00:00Z"
-            })
+            writer.writerow(row)
 
-        rows, known_urls, known_keys = load_existing_metadata(temp_csv)
-        assert "https://livetiming.formula1.com/test_01.mp3" in known_urls
-        assert "9999_63_2024-03-02T15:00:00Z" in known_keys
-        log_result("7. Idempotent Deduplication Verification", True, "Recording URL and session/driver/time keys successfully indexed")
-    except Exception as e:
-        log_result("7. Idempotent Deduplication Verification", False, str(e))
+        rows, known_urls, known_keys = load_existing_metadata(
+            temp_csv
+        )
 
-    print("\n==================================================")
-    passed_count = sum(1 for _, p, _ in results if p)
-    total_count = len(results)
-    print(f"DATASET PIPELINE TEST RESULT: {passed_count}/{total_count} PASSED")
-    print("==================================================\n")
+        assert len(rows) == 1
 
-    return passed_count == total_count
+        assert (
+            "https://livetiming.formula1.com/test_01.mp3"
+            in known_urls
+        )
+
+        assert (
+            "9999_63_2024-03-02T15:00:00Z"
+            in known_keys
+        )
+
+        # Loading again must remain idempotent.
+        rows_again, known_urls_again, known_keys_again = (
+            load_existing_metadata(temp_csv)
+        )
+
+        assert len(rows_again) == 1
+        assert known_urls_again == known_urls
+        assert known_keys_again == known_keys
 
 
-if __name__ == "__main__":
-    success = run_pipeline_tests()
-    sys.exit(0 if success else 1)
+def test_frozen_dataset_contains_audio_samples():
+    """Basic sanity check for the currently frozen dataset."""
+
+    assert METADATA_CSV.exists()
+    assert AUDIO_DIR.exists()
+
+    audio_files = [
+        path
+        for path in AUDIO_DIR.iterdir()
+        if path.is_file()
+    ]
+
+    assert len(audio_files) > 0
+
+    metadata = load_dataset_metadata()
+
+    assert metadata

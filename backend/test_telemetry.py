@@ -1,29 +1,42 @@
-from app import app
+import sys
+from pathlib import Path
 from fastapi.testclient import TestClient
 
+backend_dir = Path(__file__).resolve().parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from app import app
+
 client = TestClient(app)
+SAMPLE_AUDIO = backend_dir.parent / "dataset" / "audio" / "lap_04.mp3"
 
-# Test 1: dataset/validate
-r = client.get("/dataset/validate")
-val = r.json()
-passed = val["passed"]
-total = val["total"]
-overall = val["overall_status"]
-print(f"Validate: {overall} ({passed}/{total})")
 
-# Test 2: upload lap_04.mp3
-with open("../dataset/audio/lap_04.mp3", "rb") as f:
-    res = client.post("/upload", files={"file": ("lap_04.mp3", f, "audio/mp3")})
+def test_dataset_validate():
+    r = client.get("/dataset/validate")
+    assert r.status_code == 200
+    val = r.json()
+    assert val["overall_status"] == "PASS"
 
-data = res.json()
-tel = data.get("telemetry", {})
-print(f"HTTP status: {res.status_code}")
-print(f"available:   {tel.get('available')}")
-print(f"lap:         {tel.get('lap')}")
-print(f"lap_time:    {tel.get('lap_time')}")
-print(f"sector_1:    {tel.get('sector_1')}")
-print(f"sector_2:    {tel.get('sector_2')}")
-print(f"sector_3:    {tel.get('sector_3')}")
-print(f"top_speed:   {tel.get('top_speed')}")
-ctx = data.get("telemetry_context", "")
-print(f"context:\n{ctx}")
+
+def test_upload_lap_04_telemetry():
+    assert SAMPLE_AUDIO.exists(), f"Sample audio missing at {SAMPLE_AUDIO}"
+    with open(SAMPLE_AUDIO, "rb") as f:
+        res = client.post(
+            "/upload",
+            files={"file": ("lap_04.mp3", f, "audio/mp3")}
+        )
+
+    assert res.status_code == 200
+    data = res.json()
+    tel = data.get("telemetry", {})
+    assert tel.get("available") is True
+    assert tel.get("lap") == 4
+
+    series = data.get("telemetry_series", {})
+    assert series.get("available") is True
+    assert series.get("status") in {"INSUFFICIENT", "PARTIAL", "AVAILABLE"}
+    assert series.get("point_count", 0) >= 1
+    assert isinstance(series.get("points"), list)
+    assert series["points"][-1]["lap"] == 4
+    assert abs(series["points"][-1]["lap_time"] - 99.17) < 1e-3

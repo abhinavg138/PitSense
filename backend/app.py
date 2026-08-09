@@ -30,6 +30,7 @@ from dataset_loader import (
     get_simulation_samples,
     load_dataset_metadata,
 )
+from telemetry_contract import build_telemetry_series
 from pydantic import BaseModel
 
 
@@ -210,6 +211,7 @@ async def upload_audio(
         }
         session_manager.add_observation(active_session_id, obs)
         history = session_manager.get_history(active_session_id)
+        telemetry_series = build_telemetry_series(history)
 
         # Phase 7 — Temporal Stress & Lap-Time Correlation Analysis
         temporal_analysis   = analyze_temporal_session(history)
@@ -240,6 +242,7 @@ async def upload_audio(
             "filename":                   file.filename,
             # Telemetry — always present, available=True/False
             "telemetry":                  telemetry_response,
+            "telemetry_series":           telemetry_series,
             "telemetry_context":          telemetry_context,
             "transcript":                 transcript,
             "emotion":                    emotion,
