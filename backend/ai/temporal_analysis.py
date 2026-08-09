@@ -15,6 +15,16 @@ If data is missing or insufficient, explicit availability flags are returned.
 import math
 from typing import Dict, List, Optional, Any
 
+from database.db import (
+    init_db,
+    save_observation,
+    load_all_sessions,
+    delete_session_history,
+    clear_all_session_history,
+    get_active_session_id,
+    set_active_session_id,
+)
+
 # Configurable Thresholds
 STRESS_TREND_THRESHOLD = 5          # abs(stress_change) >= 5 triggers RISING/FALLING
 PERFORMANCE_TREND_THRESHOLD = 0.2    # abs(lap_delta) >= 0.2s triggers SLOWER/FASTER
@@ -23,10 +33,24 @@ SUSTAINED_STRESS_THRESHOLD = 60     # minimum stress level for sustained elevate
 
 
 class SessionManager:
-    """In-memory session history store."""
+    """Durable session history store backed by SQLite."""
 
-    def __init__(self):
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path
         self._sessions: Dict[str, List[Dict[str, Any]]] = {}
+        self._active_session_id: Optional[str] = None
+        self._restore_from_db()
+
+    def _restore_from_db(self):
+        """Restores persisted session observations from SQLite on initialization."""
+        try:
+            init_db(self.db_path)
+            self._sessions = load_all_sessions(self.db_path)
+            self._active_session_id = get_active_session_id(self.db_path)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(f"[SESSION] Failed to restore sessions from DB: {exc}")
+            self._sessions = {}
 
     def get_history(self, session_id: str) -> List[Dict[str, Any]]:
         return self._sessions.get(session_id, [])
@@ -34,18 +58,28 @@ class SessionManager:
     def add_observation(self, session_id: str, observation: Dict[str, Any]):
         if session_id not in self._sessions:
             self._sessions[session_id] = []
+
         self._sessions[session_id].append(observation)
+        order = len(self._sessions[session_id])
+
+        # Persist to SQLite
+        save_observation(session_id, observation, order, db_path=self.db_path)
+        set_active_session_id(session_id, db_path=self.db_path)
+        self._active_session_id = session_id
 
     def reset_session(self, session_id: str):
         if session_id in self._sessions:
             self._sessions[session_id] = []
+        delete_session_history(session_id, db_path=self.db_path)
 
     def reset_all(self):
         self._sessions.clear()
+        clear_all_session_history(db_path=self.db_path)
 
 
 # Global in-memory session manager instance
 session_manager = SessionManager()
+
 
 
 def pearson_correlation(x: List[float], y: List[float]) -> Optional[float]:

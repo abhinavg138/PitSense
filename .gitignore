@@ -18,6 +18,7 @@ frontend/dist/
 *.db
 *.sqlite
 *.sqlite3
+backend/data/
 
 # IDE
 .vscode/
