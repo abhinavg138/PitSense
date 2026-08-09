@@ -4,6 +4,7 @@ import TranscriptCard from "../components/dashboard/TranscriptCard";
 import EmotionCard from "../components/dashboard/EmotionCard";
 import AISummary from "../components/dashboard/AISummary";
 import TelemetryCard from "../components/dashboard/TelemetryCard";
+import DecisionCard from "../components/dashboard/DecisionCard";
 import EngineerChat from "../components/engineer/EngineerChat";
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -261,6 +262,9 @@ export default function Dashboard() {
 
                     {/* Race Telemetry Card — always shown after first analysis */}
                     {analysis && <TelemetryCard analysis={analysis} />}
+
+                    {/* Engineer Decision Support Engine Card */}
+                    {analysis && <DecisionCard analysis={analysis} />}
 
                     {/* AI Race Engineer Report */}
                     <AISummary analysis={analysis} />

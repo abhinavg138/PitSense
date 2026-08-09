@@ -53,7 +53,7 @@ def is_missing_telemetry_question(question):
     return any(keyword in q for keyword in UNAVAILABLE_TELEMETRY_KEYWORDS)
 
 
-def build_session_context(transcript, emotion, driver, ai_summary="", telemetry_context=""):
+def build_session_context(transcript, emotion, driver, ai_summary="", telemetry_context="", engineer_decision=None):
     emotion = emotion or {}
     driver = driver or {}
     stress = driver.get("stress", emotion.get("stress", 0))
@@ -73,6 +73,8 @@ def build_session_context(transcript, emotion, driver, ai_summary="", telemetry_
     }
     if telemetry_context:
         ctx["telemetry"] = telemetry_context
+    if engineer_decision:
+        ctx["engineer_decision"] = engineer_decision
     return ctx
 
 

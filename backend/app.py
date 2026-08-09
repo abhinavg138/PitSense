@@ -18,6 +18,8 @@ from ai.temporal_engine import (
     analyze_lap_performance,
     generate_engineering_insight,
 )
+from ai.temporal_analysis import analyze_temporal_session
+from ai.decision_engine import evaluate_engineer_decision
 from ai.recommendation_engine import generate_actionable_insight
 from dataset_loader import get_telemetry_for_file, run_dataset_validation, build_telemetry_context_string
 from pydantic import BaseModel
@@ -133,10 +135,19 @@ async def upload_audio(
         session_manager.add_observation(active_session_id, obs)
         history = session_manager.get_history(active_session_id)
 
-        # Phase 3 & 4 analysis
-        temporal_analysis   = analyze_temporal_stress(history)
+        # Phase 7 — Temporal Stress & Lap-Time Correlation Analysis
+        temporal_analysis   = analyze_temporal_session(history)
         lap_performance     = analyze_lap_performance(history)
         engineering_insight = generate_engineering_insight(temporal_analysis, lap_performance, driver_state)
+
+        # Phase 8 — Engineer Decision Support Engine
+        engineer_decision   = evaluate_engineer_decision(
+            driver_state=driver_state,
+            stress_index=stress_index,
+            temporal_analysis=temporal_analysis,
+            audio_emotion=audio_emotion,
+            transcript=transcript,
+        )
 
         # Phase 5 — Actionable Recommendation Engine
         actionable_insight  = generate_actionable_insight(
@@ -164,13 +175,14 @@ async def upload_audio(
             "audio_emotion":              audio_emotion,
             # Phase 2 — Explainable Stress Index
             "stress_index":               stress_index,
-            # Phase 3 — Temporal Stress Analysis
+            # Phase 7 — Temporal Stress & Lap-Time Correlation
             "temporal_analysis":          temporal_analysis,
+            # Phase 8 — Engineer Decision Support Engine
+            "engineer_decision":          engineer_decision,
             # Phase 4 — Lap Performance Correlation
             "lap_performance":            lap_performance,
-            # Phase 4 — Decision Support Insight
+            # Decision Support Insights
             "engineering_insight":        engineering_insight,
-            # Phase 5 — Actionable Recommendation Engine
             "engineering_recommendation": actionable_insight,
         }
 
