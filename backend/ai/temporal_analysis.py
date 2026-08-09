@@ -257,6 +257,22 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     else:
         association = f"Insufficient paired data ({len(paired_stresses)}/{MIN_CORRELATION_POINTS} required) for correlation."
 
+    # Domain Data Quality Mapping
+    telemetry_quality = "UNAVAILABLE"
+    if current_lap_time is not None:
+        last_tel = records[-1].get("telemetry", {})
+        if last_tel and last_tel.get("available"):
+            has_sectors = last_tel.get("sector_1") is not None and last_tel.get("sector_2") is not None
+            telemetry_quality = "AVAILABLE" if has_sectors else "PARTIAL"
+        else:
+            telemetry_quality = "PARTIAL"
+
+    correlation_quality = "UNAVAILABLE"
+    if len(paired_stresses) >= MIN_CORRELATION_POINTS and correlation is not None:
+        correlation_quality = "AVAILABLE"
+    elif len(paired_stresses) > 0:
+        correlation_quality = "INSUFFICIENT"
+
     return {
         "available": True,
         "sample_count": sample_count,
@@ -283,7 +299,12 @@ def analyze_temporal_session(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "correlation_strength": correlation_strength,
         "association": association,
         "stress_history": stresses[-4:],
+        "data_quality": {
+            "telemetry": telemetry_quality,
+            "correlation": correlation_quality,
+        },
     }
+
 
 
 def analyze_temporal_stress(history: List[Dict[str, Any]]) -> Dict[str, Any]:

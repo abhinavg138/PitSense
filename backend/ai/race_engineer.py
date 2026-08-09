@@ -608,8 +608,14 @@ def generate_summary_with_source(transcript, emotion, driver):
         ai_summary=deterministic_summary
     )
 
-    gemini_brief = generate_gemini_brief(context)
+    gemini_brief = None
+    try:
+        gemini_brief = generate_gemini_brief(context)
+    except Exception as exc:
+        gemini_brief = None
+
     if gemini_brief:
+
         enhanced_summary = "\n\n".join([
             deterministic_summary,
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",

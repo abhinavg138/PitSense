@@ -157,6 +157,25 @@ def evaluate_engineer_decision(
 
     confidence = round(max(0.40, calc_confidence), 2)
 
+    # 4. Construct Decision Evidence Block
+    temp_dq = temporal_analysis.get("data_quality", {})
+    evidence = {
+        "reasons": reasons,
+        "stress_trajectory": temporal_analysis.get("stress_history", [int(stress_val)]),
+        "stress_trend": stress_trend,
+        "current_lap": temporal_analysis.get("current_lap"),
+        "lap_time": temporal_analysis.get("current_lap_time"),
+        "lap_delta": lap_delta,
+        "performance_direction": perf_direction,
+        "association": temporal_analysis.get("association", "Building temporal picture…"),
+        "data_quality": {
+            "transcript": "AVAILABLE" if transcript else "UNAVAILABLE",
+            "audio_emotion": "AVAILABLE" if audio_emotion.get("confidence") is not None else "UNAVAILABLE",
+            "telemetry": temp_dq.get("telemetry", "UNAVAILABLE"),
+            "correlation": temp_dq.get("correlation", "UNAVAILABLE" if sample_count < 1 else "INSUFFICIENT" if sample_count < 3 else "AVAILABLE"),
+        }
+    }
+
     return {
         "severity": severity,
         "priority": priority,
@@ -164,4 +183,6 @@ def evaluate_engineer_decision(
         "recommendation": recommendation,
         "reasons": reasons,
         "confidence": confidence,
+        "evidence": evidence,
     }
+

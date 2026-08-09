@@ -19,6 +19,8 @@ export default function DecisionCard({ analysis }) {
 
     const temporal = analysis.temporal_analysis || {};
     const decision = analysis.engineer_decision || {};
+    const dataQuality = (decision.evidence && decision.evidence.data_quality) || (temporal.data_quality) || {};
+
 
     const sampleCount = temporal.sample_count || temporal.observation_count || 1;
     const badge = getSeverityBadge(decision.severity || "CALM");
@@ -193,10 +195,31 @@ export default function DecisionCard({ analysis }) {
 
             </div>
 
-            {/* Observational statement footer */}
-            <p className="text-[11px] italic mt-4 pt-3 text-zinc-400" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                {association}
-            </p>
+            {/* Domain Data Quality Badges */}
+            <div className="mt-4 pt-3 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.04)" }}>
+                <p className="text-[11px] italic text-zinc-400">
+                    {association}
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                    {Object.entries({
+                        Transcript: dataQuality.transcript || "AVAILABLE",
+                        Emotion: dataQuality.audio_emotion || "AVAILABLE",
+                        Telemetry: dataQuality.telemetry || "UNAVAILABLE",
+                        Correlation: dataQuality.correlation || (sampleCount < 3 ? "INSUFFICIENT" : "AVAILABLE")
+                    }).map(([domain, state]) => {
+                        const style = state === "AVAILABLE" ? { color: "#30D158", bg: "rgba(48, 209, 88, 0.12)" }
+                            : state === "PARTIAL" ? { color: "#FF9F0A", bg: "rgba(255, 159, 10, 0.12)" }
+                            : state === "INSUFFICIENT" ? { color: "#FFD60A", bg: "rgba(255, 214, 10, 0.12)" }
+                            : { color: "#71717A", bg: "rgba(113, 113, 122, 0.12)" };
+                        return (
+                            <span key={domain} className="text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider" style={{ color: style.color, background: style.bg }}>
+                                {domain}: {state}
+                            </span>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
     );
 }
+

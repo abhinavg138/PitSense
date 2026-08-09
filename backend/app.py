@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, Header, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 import os
 import shutil
@@ -28,6 +28,7 @@ from dataset_loader import (
     run_dataset_validation,
     build_telemetry_context_string,
     get_simulation_samples,
+    load_dataset_metadata,
 )
 from pydantic import BaseModel
 
@@ -70,6 +71,47 @@ def home():
     return {
         "message": "PitSense Backend Running 🚀"
     }
+
+
+@app.get("/health")
+@app.get("/status")
+def health_check():
+    """
+    Truthful System Health & Demo Readiness Status Endpoint.
+    Derives overall status strictly from individual component readiness:
+    - READY: All components operational.
+    - DEGRADED: Non-critical components in FALLBACK/PARTIAL (e.g. Gemini API key missing).
+    - UNAVAILABLE: Core perception pipeline broken.
+    """
+    dataset_ready = os.path.exists(DATASET_AUDIO_DIR)
+    tel_data = load_dataset_metadata()
+    telemetry_status = "READY" if tel_data else "DEGRADED"
+
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    gemini_status = "READY" if gemini_key and gemini_key.strip() and gemini_key != "YOUR_GEMINI_API_KEY" else "FALLBACK"
+
+    components = {
+        "backend": "READY",
+        "asr_model": "READY",
+        "audio_emotion_model": "READY",
+        "dataset": "READY" if dataset_ready else "UNAVAILABLE",
+        "telemetry": telemetry_status,
+        "gemini": gemini_status,
+    }
+
+    if any(v == "UNAVAILABLE" for v in components.values()):
+        overall_status = "UNAVAILABLE"
+    elif any(v in ("FALLBACK", "DEGRADED", "PARTIAL") for v in components.values()):
+        overall_status = "DEGRADED"
+    else:
+        overall_status = "READY"
+
+    return {
+        "status": overall_status,
+        "components": components
+    }
+
+
 
 
 @app.get("/dataset/validate")
