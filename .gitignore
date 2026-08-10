@@ -30,4 +30,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Upload temp directories (backend and root-level)
 backend/uploads/
+uploads/
+
+# Generated database files (excluded via *.db above, but be explicit)
+backend/data/

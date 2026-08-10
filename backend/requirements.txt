@@ -1,5 +1,23 @@
+# PitSense Backend Dependencies
+# ──────────────────────────────────────────────────────────────────────────────
+# Core API framework
 fastapi
 uvicorn
 python-multipart
-transformers
+pydantic
+
+# ML / AI / Perception
 torch
+transformers
+numpy
+soundfile
+
+# HTTP (used by Gemini fallback via urllib; requests used by dataset builder)
+requests
+
+# Testing
+pytest
+httpx
+
+# Environment variable loading
+python-dotenv
