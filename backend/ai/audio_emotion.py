@@ -1,3 +1,4 @@
+import os
 from transformers import pipeline as hf_pipeline
 
 # Model: ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition
@@ -5,6 +6,8 @@ from transformers import pipeline as hf_pipeline
 # speech emotion recognition. Runs locally on CPU, no API key needed.
 # Labels: angry, calm, disgust, fearful, happy, neutral, sad, surprised
 _MODEL_ID = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+_LOCAL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "audio_emotion"))
+_MODEL_PATH = _LOCAL_PATH if os.path.isdir(_LOCAL_PATH) and os.listdir(_LOCAL_PATH) else _MODEL_ID
 
 # Sentinel returned when the model is unavailable or inference fails.
 # Using "unavailable" (not a real emotion label) makes it unambiguous that
@@ -14,7 +17,7 @@ _UNAVAILABLE = {"label": "unavailable", "confidence": 0.0, "probabilities": {}}
 try:
     _pipe = hf_pipeline(
         "audio-classification",
-        model=_MODEL_ID,
+        model=_MODEL_PATH,
         top_k=None,   # return probabilities for all classes
     )
 except Exception as _load_err:

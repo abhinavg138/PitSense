@@ -1,9 +1,14 @@
+import os
 from transformers import pipeline
+
+_MODEL_ID = "j-hartmann/emotion-english-distilroberta-base"
+_LOCAL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "text_emotion"))
+_MODEL_PATH = _LOCAL_PATH if os.path.isdir(_LOCAL_PATH) and os.listdir(_LOCAL_PATH) else _MODEL_ID
 
 # Load model once at startup
 emotion_pipeline = pipeline(
     "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
+    model=_MODEL_PATH,
     top_k=None
 )
 

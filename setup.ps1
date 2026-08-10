@@ -2,116 +2,172 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "============================================================"
-Write-Host "                 PIT SENSE SETUP"
+Write-Host "                   PIT SENSE SETUP"
 Write-Host "============================================================"
 Write-Host ""
 
-# ------------------------------------------------------------
-# Check Python
-# ------------------------------------------------------------
+# ============================================================
+# Stage 1: Check Python
+# ============================================================
 
 Write-Host "[1/7] Checking Python..."
 
-try {
-    $pythonVersion = python --version
-    Write-Host "Found: $pythonVersion"
+$pythonCmd = $null
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    $pythonCmd = "python"
+} elseif (Get-Command py -ErrorAction SilentlyContinue) {
+    $pythonCmd = "py"
 }
-catch {
+
+if ($null -eq $pythonCmd) {
     Write-Host ""
-    Write-Host "ERROR: Python is not installed or not available in PATH."
-    Write-Host "Install Python and run this script again."
+    Write-Host "ERROR: Python was not found in PATH." -ForegroundColor Red
+    Write-Host "Install Python 3.10+ from https://python.org and check 'Add to PATH'."
     exit 1
 }
 
-# ------------------------------------------------------------
-# Create virtual environment
-# ------------------------------------------------------------
+$pythonVersion = & $pythonCmd --version 2>&1
+Write-Host "OK  $pythonVersion" -ForegroundColor Green
+
+# ============================================================
+# Stage 2: Create / verify root .venv
+# ============================================================
 
 Write-Host ""
-Write-Host "[2/7] Creating virtual environment..."
+Write-Host "[2/7] Setting up virtual environment at .venv ..."
 
 if (!(Test-Path ".venv")) {
-    python -m venv .venv
-    Write-Host "Virtual environment created."
+    & $pythonCmd -m venv .venv
+    Write-Host "OK  Virtual environment created at .venv" -ForegroundColor Green
+} else {
+    Write-Host "OK  .venv already exists, skipping creation." -ForegroundColor Yellow
 }
-else {
-    Write-Host "Virtual environment already exists."
-}
 
-# ------------------------------------------------------------
-# Activate virtual environment
-# ------------------------------------------------------------
+$venvPython = ".venv\Scripts\python.exe"
 
-Write-Host ""
-Write-Host "[3/7] Activating virtual environment..."
-
-$activateScript = ".\.venv\Scripts\Activate.ps1"
-
-if (!(Test-Path $activateScript)) {
-    Write-Host "ERROR: Could not find virtual environment activation script."
+if (!(Test-Path $venvPython)) {
+    Write-Host ""
+    Write-Host "ERROR: $venvPython not found. The virtual environment may be corrupt." -ForegroundColor Red
+    Write-Host "Delete .venv and run setup.ps1 again."
     exit 1
 }
 
-& $activateScript
+Write-Host "OK  Using $venvPython" -ForegroundColor Green
 
-# ------------------------------------------------------------
-# Upgrade pip
-# ------------------------------------------------------------
-
-Write-Host ""
-Write-Host "[4/7] Updating pip..."
-
-python -m pip install --upgrade pip
-
-# ------------------------------------------------------------
-# Install CPU-only PyTorch
-# ------------------------------------------------------------
+# ============================================================
+# Stage 3: Upgrade pip
+# ============================================================
 
 Write-Host ""
-Write-Host "[5/7] Installing CPU-only PyTorch..."
+Write-Host "[3/7] Upgrading pip..."
+& $venvPython -m pip install --upgrade pip --quiet
+Write-Host "OK  pip upgraded." -ForegroundColor Green
 
-python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-
-# ------------------------------------------------------------
-# Install project dependencies
-# ------------------------------------------------------------
-
-Write-Host ""
-Write-Host "[6/7] Installing PitSense dependencies..."
-
-python -m pip install -r requirements.txt
-
-# ------------------------------------------------------------
-# Download models
-# ------------------------------------------------------------
+# ============================================================
+# Stage 4: Install CPU-only PyTorch
+# ============================================================
 
 Write-Host ""
-Write-Host "[7/7] Downloading Hugging Face models..."
+Write-Host "[4/7] Installing CPU-compatible PyTorch..."
+& $venvPython -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+Write-Host "OK  PyTorch installed (CPU build)." -ForegroundColor Green
 
-python setup_models.py
-
-# ------------------------------------------------------------
-# Finish
-# ------------------------------------------------------------
+# ============================================================
+# Stage 5: Install backend dependencies
+# ============================================================
 
 Write-Host ""
-Write-Host "============================================================"
-Write-Host "             PIT SENSE SETUP COMPLETE"
-Write-Host "============================================================"
-Write-Host ""
+Write-Host "[5/7] Installing backend dependencies from backend\requirements.txt ..."
 
-Write-Host "Next steps:"
-Write-Host ""
-Write-Host "1. Create a .env file from .env.example"
-Write-Host "2. Add your own Gemini API key"
-Write-Host "3. Add your Hugging Face token if required"
-Write-Host "4. Start the PitSense backend"
-Write-Host "5. Start the frontend"
-Write-Host ""
+if (!(Test-Path "backend\requirements.txt")) {
+    Write-Host "ERROR: backend\requirements.txt not found." -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "To activate the environment later:"
-Write-Host ""
-Write-Host "    .\.venv\Scripts\activate"
-Write-Host ""
+& $venvPython -m pip install -r backend\requirements.txt
+Write-Host "OK  Backend dependencies installed." -ForegroundColor Green
 
-Write-Host "Setup finished successfully."
+# ============================================================
+# Stage 6: Download Hugging Face models locally
+#
+# setup_models.py at repo root delegates to backend/setup_models.py.
+# Models are saved into backend\models\:
+#   backend\models\parakeet         (nvidia/parakeet-tdt-0.6b-v3)
+#   backend\models\audio_emotion    (ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition)
+#   backend\models\text_emotion     (j-hartmann/emotion-english-distilroberta-base)
+#
+# No Hugging Face API token is required.
+# Models run locally on CPU after download.
+# Re-running this stage is safe; already-downloaded models are reused.
+# ============================================================
+
+Write-Host ""
+Write-Host "[6/7] Downloading Hugging Face models into backend\models\ ..."
+
+if (!(Test-Path "setup_models.py")) {
+    Write-Host "ERROR: setup_models.py not found in repository root." -ForegroundColor Red
+    exit 1
+}
+
+& $venvPython setup_models.py
+Write-Host "OK  Models downloaded." -ForegroundColor Green
+
+# ============================================================
+# Stage 7: Configure backend\.env
+#
+# The application reads GEMINI_API_KEY via:
+#   1. os.getenv("GEMINI_API_KEY")  (environment variable)
+#   2. backend/.env                  (read directly by llm_summary._get_api_key)
+#   3. repo-root .env               (fallback in _get_api_key)
+#
+# We create backend\.env from backend\.env.example so the app
+# finds it at location 2. An existing file is never overwritten.
+# ============================================================
+
+Write-Host ""
+Write-Host "[7/7] Configuring backend\.env ..."
+
+if (Test-Path "backend\.env") {
+    Write-Host "OK  backend\.env already exists, leaving it unchanged." -ForegroundColor Yellow
+} else {
+    if (Test-Path "backend\.env.example") {
+        Copy-Item "backend\.env.example" "backend\.env"
+        Write-Host "OK  Created backend\.env from backend\.env.example" -ForegroundColor Green
+    } elseif (Test-Path ".env.example") {
+        Copy-Item ".env.example" "backend\.env"
+        Write-Host "OK  Created backend\.env from .env.example" -ForegroundColor Green
+    } else {
+        Set-Content "backend\.env" "GEMINI_API_KEY=`nGEMINI_MODEL=gemini-3.6-flash"
+        Write-Host "OK  Created default backend\.env" -ForegroundColor Green
+    }
+}
+
+# ============================================================
+# Done
+# ============================================================
+
+Write-Host ""
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "              PIT SENSE SETUP COMPLETE" -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Setup is idempotent. Running it again is safe." -ForegroundColor Green
+Write-Host ""
+Write-Host "NEXT STEPS" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  1. Configure Gemini (optional):"
+Write-Host "       Open backend\.env and set:"
+Write-Host "       GEMINI_API_KEY=your_gemini_api_key_here"
+Write-Host "       If left blank, PitSense uses local rule-based fallback mode."
+Write-Host ""
+Write-Host "  2. Start the backend API server:"
+Write-Host "       cd backend"
+Write-Host "       ..\.venv\Scripts\python.exe -m uvicorn app:app --reload --port 8000"
+Write-Host "       Backend runs at http://localhost:8000"
+Write-Host ""
+Write-Host "  3. Start the frontend (open a separate terminal):"
+Write-Host "       cd frontend"
+Write-Host "       npm install"
+Write-Host "       npm run dev"
+Write-Host "       Dashboard runs at http://localhost:5173"
+Write-Host ""

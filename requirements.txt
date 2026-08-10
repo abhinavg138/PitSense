@@ -1,0 +1,33 @@
+# PitSense Dependencies (Root Wrapper)
+# ============================================================
+
+# Core API
+fastapi
+uvicorn
+python-multipart
+pydantic
+
+# ML / AI
+transformers
+huggingface_hub
+numpy
+soundfile
+
+# Audio / data
+librosa
+scipy
+pandas
+
+# HTTP / APIs
+requests
+httpx
+
+# Environment variables
+python-dotenv
+
+# Testing
+pytest
+
+# NOTE:
+# PyTorch is installed separately by setup.ps1 using the
+# CPU-only PyTorch wheel for compatibility with basic laptops.

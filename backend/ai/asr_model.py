@@ -4,12 +4,16 @@ import tempfile
 
 from transformers import pipeline
 
+_MODEL_ID = "nvidia/parakeet-tdt-0.6b-v3"
+_LOCAL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "parakeet"))
+_MODEL_PATH = _LOCAL_PATH if os.path.isdir(_LOCAL_PATH) and os.listdir(_LOCAL_PATH) else _MODEL_ID
+
 # Load Parakeet once at import time so every request reuses the same model.
 # nvidia/parakeet-tdt-0.6b-v3 is a CTC/TDT model; chunk_length_s enables
 # long-form transcription without hitting the encoder's context limit.
 asr = pipeline(
     "automatic-speech-recognition",
-    model="nvidia/parakeet-tdt-0.6b-v3",
+    model=_MODEL_PATH,
     chunk_length_s=30,
 )
 

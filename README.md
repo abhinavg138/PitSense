@@ -6,20 +6,143 @@ PitSense processes race-radio audio signals and unifies them with telemetry and 
 
 ---
 
-## Overview
+## ⚡ Quick Start & Installation
 
-Motorsport race engineers must interpret compressed, high-stress driver radio messages in real time under extreme time pressure.
-- **Radio audio alone** lacks objective performance data—a driver sounding anxious may still be setting personal best sector times.
-- **Telemetry alone** lacks human context—a drop in speed could be tactical lift-and-coast or an unvoiced driver physical struggle.
+Getting PitSense running on a fresh clone is automated via PowerShell on Windows.
 
-PitSense bridges this gap by unifying raw race-radio audio perception, driver-stress classification, OpenF1 dataset telemetry matching, multi-lap temporal analysis, and a rule-based decision support engine into a real-time engineering dashboard.
+### Preferred Windows Installation (`setup.ps1`)
 
-> **Positioning & Operational Boundaries**
+Open PowerShell in the project directory and run:
+
+```powershell
+git clone https://github.com/abhinavg138/PitSense.git
+cd PitSense
+Set-ExecutionPolicy -Scope Process Bypass
+.\setup.ps1
+```
+
+#### What `setup.ps1` does automatically:
+1. **Python Check**: Verifies Python 3.10+ is available in system PATH.
+2. **Virtual Environment**: Creates root `.venv` if missing (`python -m venv .venv`).
+3. **Pip Upgrade**: Upgrades `pip` inside the virtual environment.
+4. **PyTorch Installation**: Installs CPU-compatible PyTorch (`torch`) from PyTorch CPU wheel index (`https://download.pytorch.org/whl/cpu`).
+5. **Dependency Installation**: Installs backend Python dependencies from `backend/requirements.txt`.
+6. **Local Model Setup**: Runs `setup_models.py` (which delegates to `backend/setup_models.py`) to download and cache the 3 required Hugging Face AI models locally into `backend/models/`.
+7. **Environment File Setup**: Creates `backend\.env` from `backend\.env.example` if `backend\.env` does not exist.
+
+---
+
+### Starting PitSense
+
+After setup completes, start the backend and frontend in separate terminals:
+
+#### 1. Start Backend Server (FastAPI / Uvicorn)
+```powershell
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app:app --reload --port 8000
+```
+*Backend API will run at `http://localhost:8000` (API documentation at `http://localhost:8000/docs`).*
+
+#### 2. Start Frontend Dashboard (React / Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Frontend Dashboard will run at `http://localhost:5173`.*
+
+---
+
+### Manual Installation (Alternative)
+
+If you prefer to set up manually without `setup.ps1`:
+
+#### On Windows:
+```powershell
+# 1. Clone repository
+git clone https://github.com/abhinavg138/PitSense.git
+cd PitSense
+
+# 2. Create virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 3. Install CPU-only PyTorch & backend dependencies
+python -m pip install --upgrade pip
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r backend/requirements.txt
+
+# 4. Download HF models locally
+python setup_models.py
+
+# 5. Configure environment variables
+Copy-Item .env.example backend\.env
+```
+
+#### On Linux / macOS:
+```bash
+# 1. Clone repository
+git clone https://github.com/abhinavg138/PitSense.git
+cd PitSense
+
+# 2. Create virtual environment
+python3 -m venv backend/.venv
+source backend/.venv/bin/activate
+
+# 3. Install CPU-only PyTorch & backend dependencies
+pip install --upgrade pip
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r backend/requirements.txt
+
+# 4. Download HF models locally
+python backend/setup_models.py
+
+# 5. Configure environment variables
+cp .env.example backend/.env
+
+# 6. Start Backend
+cd backend
+python -m uvicorn app:app --reload --port 8000
+```
+
+---
+
+## 🔑 Environment Variables
+
+PitSense uses environment variables configured in `backend/.env` (or root `.env`).
+
+### `.env` File Setup
+Copy `.env.example` to `backend/.env`:
+
+```env
+# Optional: Google Gemini API Key for race engineer synthesis
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: Gemini model selection (defaults to gemini-3.6-flash)
+GEMINI_MODEL=gemini-3.6-flash
+```
+
+> [!IMPORTANT]
+> - **No Hugging Face Token Required**: PitSense runs Hugging Face models **locally / offline**. `HF_TOKEN` is **NOT** needed.
+> - **Gemini API Key**: `GEMINI_API_KEY` is optional. If provided, Gemini generates natural-language explanations grounded strictly in deterministic decision outputs. If omitted or invalid, PitSense automatically falls back to local deterministic synthesis with zero loss of core functionality.
+> - **Secrets Protection**: `.env` files and model weight directories are listed in `.gitignore` and must NEVER be committed to Git.
+
+---
+
+## 🎯 Overview & Problem Statement
+
+Motorsport race engineers must interpret compressed, high-stress driver radio communications under extreme time pressure:
+- **Radio audio alone** lacks objective performance data—a driver sounding anxious might still be setting personal best sector times.
+- **Telemetry alone** lacks human context—a drop in lap speed could be tactical lift-and-coast or an unvoiced physical vehicle issue.
+
+PitSense unifies raw race-radio audio perception, driver-stress classification, OpenF1 telemetry dataset matching, multi-lap temporal analysis, and an authoritative rule-based decision support engine into a real-time engineering dashboard.
+
+> **Positioning & Operational Boundaries**  
 > PitSense is a **decision-support tool** for race engineers. It does **not** autonomously control race cars, does **not** provide safety-critical certification, and does **not** claim medical-grade emotion detection. All engineering recommendations are strictly derived from observable acoustic, textual, and telemetry signals.
 
 ---
 
-## Core Pipeline
+## 🏛️ Architecture & Pipeline
 
 ```mermaid
 flowchart TD
@@ -36,397 +159,270 @@ flowchart TD
     H --> I[Temporal Stress & Pace Trend Analysis]
     I --> J[Deterministic Decision Support Engine]
     J --> K[Actionable Recommendation Engine]
-    K --> L[Optional Gemini 3.6 Flash Synthesis]
+    K --> L[Optional Gemini 3.6 Flash Wording Layer]
 
-    J --> M[PitSense Dashboard & Replay UI]
+    J --> M[PitSense React Dashboard]
     L --> M
     G --> M
 ```
 
-### Pipeline Sequence
-1. **Perception**: Audio is transcribed via Nvidia Parakeet TDT ASR (`nvidia/parakeet-tdt-0.6b-v3`). Acoustic features (pitch, energy, tempo) and text emotions are extracted.
-2. **Stress Inference**: Multi-signal scoring engine computes a transparent `stress_index` (0–100) and driver state (`CALM`, `ELEVATED`, `STRESSED`, `CRITICAL`).
-3. **Telemetry Resolution**: Filenames are matched against dataset metadata (`metadata.csv` & `openf1_extended.json`) to resolve lap number, lap time, sector split times, and trap speeds.
-4. **Temporal Accumulation**: Observations are recorded into SQLite (`SessionManager`) to build multi-lap trend histories and calculate stress/pace Pearson correlations.
-5. **Deterministic Decision**: Evaluates rules *before* natural-language generation to output authoritative severities (`CRITICAL`, `STRESSED`, `ELEVATED`, `CALM`) and decisions (`PIT_AND_INSPECT`, `RADIO_INTERVENTION`, `MONITOR`, etc.).
-6. **AI Synthesis**: Optional Gemini 3.6 Flash layer formulates concise pit-wall replies grounded in the deterministic decision engine context.
+### Component Roles & Boundaries
+
+1. **Pretrained AI Perception Models** (Local CPU inference):
+   - Speech-to-Text transcription via Nvidia Parakeet TDT ASR.
+   - Speech Emotion Recognition via Wav2Vec2.
+   - Text Emotion Classification via DistilRoBERTa.
+2. **PitSense Custom Intelligence**:
+   - Acoustic signal processing (pitch, energy, tempo, silence ratio).
+   - Multi-signal weighted stress scoring engine (`stress_index` 0–100).
+   - Driver state classification (`CALM`, `ELEVATED`, `STRESSED`, `CRITICAL`, etc.).
+   - OpenF1 telemetry resolution and telemetry series normalization.
+   - Temporal multi-lap trend analysis and Pearson stress/pace correlation.
+3. **Deterministic Decision Engine**:
+   - Authoritative rule-based decision support system executing *prior* to any natural language generation.
+4. **Gemini Wording Layer** (External Cloud API):
+   - Optional generative layer that converts deterministic decision outputs into concise radio responses and pit-wall summaries.
 
 ---
 
-## Current Architecture
+## 🤖 AI Models
 
-| Component | Responsibility | Primary File(s) |
-| --- | --- | --- |
-| **FastAPI Core** | REST API endpoints (`/upload`, `/health`, `/simulation/*`, `/dataset/validate`, `/chat`, `/session/reset`), static file mounting, CORS middleware. | `backend/app.py` |
-| **ASR & Audio Perception** | High-speed speech transcription (`nvidia/parakeet-tdt-0.6b-v3`), acoustic feature extraction (pitch/energy/tempo), and speech emotion classification (`wav2vec2-lg-xlsr-en-speech-emotion-recognition`). | `backend/ai/asr_model.py`<br>`backend/ai/speech_features.py`<br>`backend/ai/audio_emotion.py` |
-| **Text Emotion & Driver State** | Text-domain emotion classification (`j-hartmann/emotion-english-distilroberta-base`), vehicle issue extraction (tyres, brakes, vibration, balance), and urgency rating. | `backend/ai/emotion_model.py`<br>`backend/ai/driver_state.py` |
-| **Explainable Stress Engine** | Multi-signal weighted scoring combining audio emotion confidence, acoustic pitch/energy variance, text emotion, and driver issue keywords into a 0–100 `stress_index`. | `backend/ai/stress_engine.py` |
-| **Telemetry Dataset Loader** | OpenF1 dataset loader matching radio filenames against metadata to resolve lap times, sector splits, speed traps, pit status, and radio timestamps. | `backend/dataset_loader.py` |
-| **Telemetry Contract** | Normalises time-series telemetry data across multi-observation sessions and computes session-wide data availability states. | `backend/telemetry_contract.py` |
-| **Temporal Analysis Engine** | Tracks multi-lap stress trends, baseline pace deltas, Pearson correlation coefficients, non-causal association statements, and temporal confidence caps. | `backend/ai/temporal_analysis.py` |
-| **Deterministic Decision Engine** | Authoritative rule-based decision support system generating severity, priority, decision, explainable reasons, and evidence structures. | `backend/ai/decision_engine.py` |
-| **Actionable Recommendations** | Strategic pit-wall recommendation generator combining driver state, stress trends, and lap performance. | `backend/ai/recommendation_engine.py` |
-| **AI Synthesis & Fallback Layer** | Formulates pit-wall summaries and interactive Q&A replies using Gemini 3.6 Flash. Gracefully falls back to local rule-based synthesis if API key is missing. | `backend/ai/race_engineer.py`<br>`backend/ai/llm_summary.py` |
-| **SQLite Persistence Layer** | WAL-mode SQLite database maintaining durable session history, lap trends, and active session state across Uvicorn backend restarts. | `backend/database/db.py` |
-| **Race Simulation Engine** | Dynamic discovery of dataset samples, simulation audio serving, and step-by-step race session replay. | `backend/dataset_loader.py` |
-| **Frontend Dashboard** | React 19 + Vite dashboard featuring live radio upload/recording, telemetry cards, Chart.js session graphs, decision cards, and simulation controls. | `frontend/src/pages/Dashboard.jsx`<br>`frontend/src/components/dashboard/` |
+PitSense uses 3 local Hugging Face models and 1 cloud API:
+
+| Model Component | Type / Class | Model ID | Operational Role |
+| --- | --- | --- | --- |
+| **Speech-to-Text (ASR)** | ASR Model (CTC/TDT) | `nvidia/parakeet-tdt-0.6b-v3` | Transcribes race radio audio into text with 30s chunking. |
+| **Audio Emotion** | Audio Classifier (Wav2Vec2) | `ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition` | Classifies audio emotion probabilities (angry, calm, fearful, etc.) directly from 16kHz mono WAV audio. |
+| **Text Emotion** | Text Classifier (DistilRoBERTa) | `j-hartmann/emotion-english-distilroberta-base` | Classifies text emotion probabilities (fear, anger, neutral, etc.) from driver transcript. |
+| **Generative LLM** | Cloud LLM (REST API) | `gemini-3.6-flash` | Formulates pit-wall radio summaries and interactive Q&A replies using REST endpoint. |
+
+> [!NOTE]
+> `setup_models.py` downloads `parakeet`, `audio_emotion`, and `text_emotion` to `backend/models/` during setup so inference runs 100% locally on CPU without Hugging Face API tokens.
 
 ---
 
-## Project Structure
+## 🧠 Custom PitSense Intelligence
+
+PitSense implements proprietary domain intelligence modules in `backend/ai/`:
+
+### 1. Acoustic Feature Extraction (`speech_features.py`)
+Extracts fundamental acoustic indicators from radio WAV files:
+- **Pitch (F0) Mean & Variance**: Detects vocal strain and pitch inflection using `librosa.pyin`.
+- **RMS Energy Variance**: Quantifies speech loudness dynamics and shouting intensity.
+- **Zero-Crossing Rate (ZCR)**: Measures spectral noisiness and voice harshness.
+- **Non-Silence Ratio**: Computes speech duty cycle and speech pauses.
+
+### 2. Multi-Signal Stress Engine (`stress_engine.py`)
+Computes an explainable 0–100 `stress_index` by fusing four weighted signal streams:
+- Audio emotion confidence (fear/anger weighting).
+- Acoustic feature variance (pitch jump & energy spikes).
+- Text emotion confidence (DistilRoBERTa).
+- Driver issue keyword detection (tyre vibration, brake fade, engine temp, balance).
+
+### 3. Driver-State Classification (`driver_state.py`)
+Categorizes driver state into 7 operational levels:
+`Calm`, `Confident`, `Alert`, `Concerned`, `Fatigued`, `Frustrated`, `Emergency`.
+
+### 4. Telemetry Matching & Telemetry Contract (`dataset_loader.py` & `telemetry_contract.py`)
+- Matches uploaded radio audio filenames against dataset metadata (`metadata.csv` and `openf1_extended.json`).
+- Resolves lap number, lap time, sector times (S1/S2/S3), speed traps (I1/I2/Top Speed), pit status, and radio timestamp.
+- Normalises multi-observation series and calculates session data-availability states.
+
+### 5. Temporal Analysis & Pearson Correlation (`temporal_analysis.py` & `temporal_engine.py`)
+- Maintains session multi-lap observation history in SQLite (`SessionManager`).
+- Computes **Pearson Correlation Coefficient** ($r$) between driver stress index and lap time deltas when $\ge 3$ paired observations exist.
+- Formulates non-causal association statements (e.g., *"Observing elevated stress alongside +0.45s lap degradation across 4 laps"*).
+
+### 6. Deterministic Decision Engine (`decision_engine.py`)
+Executes rule-based decision trees to output:
+- **Severity Level**: `CRITICAL`, `STRESSED`, `ELEVATED`, `CALM`.
+- **Actionable Decision**: `PIT_AND_INSPECT`, `RADIO_INTERVENTION`, `CHECK_VEHICLE`, `CHECK_DRIVER`, `MONITOR_PERFORMANCE`, `MONITOR`, `NO_ACTION`.
+- **Evidence Structure**: Quantified explanation list backing the decision.
+
+### 7. Strategic Recommendations (`recommendation_engine.py`)
+Generates actionable race-engineering recommendations based on vehicle issues, telemetry deltas, and driver stress trends.
+
+### 8. 4-State Data Quality Model
+- **`AVAILABLE`**: Complete telemetry and sufficient history ($\ge 3$ observations).
+- **`PARTIAL`**: Telemetry present but specific sector fields missing.
+- **`INSUFFICIENT`**: Telemetry present but sample count ($< 3$) too low for correlation.
+- **`UNAVAILABLE`**: Unmatched audio or missing telemetry.
+
+### 9. SQLite Session Persistence (`backend/database/db.py`)
+WAL-mode SQLite database storing active session states, observation logs, telemetry snapshots, and stress history across server restarts.
+
+---
+
+## 📊 Dataset
+
+PitSense includes a frozen dataset derived from OpenF1 formula telemetry and driver radio recordings:
+
+- **Metadata (`dataset/metadata.csv`)**: 250 records (189 `TELEMETRY_LINKED`, 61 `RADIO_ONLY`).
+- **Extended Sector Data (`dataset/openf1_extended.json`)**: Detailed sector split times and speed trap measurements.
+- **Audio Files (`dataset/audio/`)**: 157 pre-processed MP3 audio radio samples (`lap_04.mp3`, `lap_33.mp3`, `lap_44.mp3`, `lap_47.mp3`, `lap_52.mp3`, etc.).
+- **Runtime Database (`backend/data/pitsense.db`)**: SQLite persistent store generated at runtime.
+- **Runtime Uploads (`backend/uploads/`)**: Temporary storage for uploaded user audio files.
+
+---
+
+## 📂 Project Structure
 
 ```text
 PitSense/
 ├── backend/
 │   ├── ai/
-│   │   ├── asr_model.py           # Nvidia Parakeet TDT ASR
-│   │   ├── audio_emotion.py       # Audio domain speech emotion model
-│   │   ├── decision_engine.py     # Deterministic Engineer Decision Engine
-│   │   ├── driver_state.py        # Driver state classification
-│   │   ├── emotion_model.py       # Text domain emotion model (DistilRoBERTa)
-│   │   ├── llm_summary.py         # Gemini synthesis (REST, no SDK required)
-│   │   ├── race_engineer.py       # Grounded Q&A & summary engine
-│   │   ├── recommendation_engine.py # Strategic actionable insights
-│   │   ├── speech_features.py     # Acoustic signal processing
-│   │   ├── stress_engine.py       # Explainable multi-signal stress engine
-│   │   ├── temporal_analysis.py   # Temporal & Pearson correlation engine
-│   │   └── temporal_engine.py     # Lap performance helpers
+│   │   ├── asr_model.py              # Nvidia Parakeet TDT ASR loader & inference
+│   │   ├── audio_emotion.py          # Wav2Vec2 speech emotion classifier
+│   │   ├── decision_engine.py        # Deterministic Engineer Decision Engine
+│   │   ├── driver_state.py           # Driver state classification
+│   │   ├── emotion_model.py          # DistilRoBERTa text emotion classifier
+│   │   ├── llm_summary.py            # Gemini 3.6 Flash REST integration & parser
+│   │   ├── race_engineer.py          # Grounded race engineer Q&A engine
+│   │   ├── recommendation_engine.py  # Strategic actionable insights generator
+│   │   ├── speech_features.py        # Acoustic feature extraction (pitch, RMS, ZCR)
+│   │   ├── stress_engine.py          # Explainable multi-signal stress engine
+│   │   ├── temporal_analysis.py      # Multi-lap temporal trends & Pearson correlation
+│   │   └── temporal_engine.py        # Lap performance calculation helpers
 │   ├── database/
-│   │   └── db.py                  # SQLite WAL persistence layer
-│   ├── app.py                     # FastAPI backend server & endpoints
-│   ├── dataset_loader.py          # OpenF1 dataset metadata loader
-│   ├── telemetry_contract.py      # Telemetry series normalisation
-│   ├── requirements.txt
-│   ├── test_dataset_pipeline.py
-│   ├── test_phase7_8.py
-│   ├── test_phase9_persistence.py
-│   ├── test_phase9_simulation.py
-│   ├── test_phase10_hardening.py
-│   ├── test_telemetry.py
-│   └── test_telemetry_contract.py
+│   │   ├── db.py                     # SQLite WAL persistence layer
+│   │   └── models.py                 # Pydantic & database schema models
+│   ├── data/                         # SQLite database storage (pitsense.db)
+│   ├── routes/                       # FastAPI endpoint route handlers
+│   │   ├── emotion.py
+│   │   ├── history.py
+│   │   ├── report.py
+│   │   ├── transcript.py
+│   │   └── upload.py
+│   ├── uploads/                      # Uploaded audio file processing directory
+│   ├── app.py                        # FastAPI main application & API router
+│   ├── dataset_loader.py             # OpenF1 dataset loader & telemetry matcher
+│   ├── telemetry_contract.py         # Telemetry series data normaliser
+│   ├── setup_models.py               # Downloads HF models to backend/models/
+│   ├── requirements.txt              # Backend Python dependencies
+│   ├── test_dataset_pipeline.py      # Dataset loader unit tests
+│   ├── test_phase7_8.py              # Perception & decision engine tests
+│   ├── test_phase9_persistence.py    # SQLite persistence unit tests
+│   ├── test_phase9_simulation.py     # Race simulation endpoint tests
+│   ├── test_phase10_hardening.py     # API error handling & contract tests
+│   ├── test_telemetry.py             # Telemetry matching tests
+│   └── test_telemetry_contract.py    # Telemetry series contract tests
 ├── dataset/
-│   ├── audio/                     # Frozen F1 radio audio samples (.mp3)
-│   ├── metadata.csv               # Lap timing & OpenF1 telemetry metadata
-│   ├── openf1_extended.json       # Extended sector & speed trap data
-│   └── download_dataset.py        # Dataset ingestion pipeline (not for submission)
+│   ├── audio/                        # 157 frozen MP3 audio samples
+│   ├── metadata.csv                  # OpenF1 telemetry & radio metadata
+│   ├── openf1_extended.json          # Extended sector split times & speed trap data
+│   ├── build_dataset.py              # Dataset build utility
+│   ├── download_dataset.py           # Dataset ingestion utility
+│   └── README.md                     # Dataset documentation
+├── docs/
+│   ├── HACKATHON_DEMO.md             # Hackathon presentation guide
+│   ├── architecture.png              # Architecture diagram asset
+│   └── presentation.pptx             # Project presentation deck
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── dashboard/         # AISummary, DecisionCard, TelemetryCard,
-│   │   │   │                      # PerformanceGraph, SimulationControls, etc.
-│   │   │   ├── engineer/          # EngineerChat
-│   │   │   └── upload/            # UploadCard
+│   │   │   ├── dashboard/            # AISummary, DecisionCard, TelemetryCard,
+│   │   │   │                         # PerformanceGraph, SimulationControls, etc.
+│   │   │   ├── engineer/             # EngineerChat
+│   │   │   └── upload/               # UploadCard
 │   │   ├── pages/
-│   │   │   └── Dashboard.jsx      # Main Race Intelligence Dashboard
-│   │   ├── services/api.js
-│   │   └── utils/sessions.js
-│   └── package.json
-└── README.md
+│   │   │   └── Dashboard.jsx         # Main Race Intelligence Dashboard page
+│   │   ├── services/
+│   │   │   └── api.js                # Frontend API client service
+│   │   └── utils/
+│   │       └── sessions.js           # Frontend session state helpers
+│   ├── package.json                  # Frontend npm dependencies
+│   ├── vite.config.js                # Vite build configuration
+│   └── README.md                     # Frontend overview
+├── .env.example                      # Environment variables template
+├── .gitignore                        # Git ignore patterns
+├── requirements.txt                  # Root requirements wrapper
+├── setup.ps1                         # One-click Windows setup PowerShell script
+├── setup_models.py                   # Root model download wrapper
+└── README.md                         # Main repository documentation
 ```
 
 ---
 
-## Telemetry System
+## 🧪 Testing
 
-Telemetry in PitSense is linked directly to race-radio audio recordings to provide objective performance context.
+The PitSense backend includes an automated pytest suite covering dataset loaders, perception models, temporal analysis, decision trees, SQLite persistence, simulation endpoints, and API contracts.
 
-### Telemetry Architecture & Matching Strategy
-- **Dataset Structure**: `dataset/metadata.csv` contains 250 metadata records (189 `TELEMETRY_LINKED` and 61 `RADIO_ONLY`). `dataset/openf1_extended.json` contains extended sector and speed trap data. `dataset/audio/` contains 157 frozen MP3 audio samples.
-- **Lookup Strategy**: `get_telemetry_for_file(filename)` performs lowercased exact matching against dataset audio filenames.
-- **Matching Methods**: Metadata records preserve OpenF1 alignment strategy (`interval` matching: 184 rows, `nearest` matching: 6 rows, `unavailable`: 60 rows).
-- **Graceful Unmatched State**: If an uploaded audio file has no matching telemetry record, PitSense returns `{"available": False}` without failing the perception or decision pipeline.
-- **Metadata Preservation & Idempotency**: Dataset metadata loading is read-only and idempotent. First-seen records take precedence on duplicates.
-
-### Exposed Telemetry Fields
-```json
-{
-  "available": true,
-  "lap": 4,
-  "lap_time": 99.170,
-  "sector_1": 29.464,
-  "sector_2": 42.067,
-  "sector_3": 27.639,
-  "i1_speed": 286,
-  "i2_speed": 258,
-  "top_speed": 284,
-  "is_pit_out_lap": false,
-  "radio_time": "2024-09-22T12:09:14.327000+00:00",
-  "audio_file": "lap_04.mp3"
-}
-```
-
----
-
-## Live Telemetry & Graphs
-
-The PitSense frontend provides dynamic telemetry visualization using Chart.js:
-
-- **Stress Over Laps**: Line chart rendering driver stress trend (`stress_index`) across accumulated session observations.
-- **Lap Time vs Baseline**: Time-series chart tracking lap times against baseline performance.
-- **Sector Splits & Speed Traps**: Real-time display of Sector 1/2/3 durations and Intermediate 1, Intermediate 2, and Speed Trap velocities.
-- **Honest Data Quality Status**: Graphs render status indicators (`AVAILABLE`, `PARTIAL`, `INSUFFICIENT`, `UNAVAILABLE`) based on actual data completeness rather than fabricating missing telemetry points.
-
----
-
-## AI & Perception Pipeline
-
-PitSense strictly decouples **perception** and **deterministic decision-making** from **generative explanation**:
-
-1. **Audio Perception**: `nvidia/parakeet-tdt-0.6b-v3` converts speech to text. `speech_features.py` computes pitch/energy/tempo variance. `audio_emotion.py` estimates acoustic emotion confidence.
-2. **Text Analysis**: DistilRoBERTa (`j-hartmann/emotion-english-distilroberta-base`) classifies text emotion and detects driver concern keywords (e.g. tyre vibration, brake fade, engine smoke).
-3. **Multi-Signal Stress Scoring**: Combines acoustic features, speech emotion, text emotion, and issue keywords into a 0–100 `stress_index`.
-4. **Deterministic Decision Engine**: Executes rule-based decision trees *prior* to any LLM invocation.
-5. **Generative Explanation**: Gemini 3.6 Flash generates natural-language summaries and pit-wall replies based on the deterministic engine's structured outputs. If the Gemini API is unreachable or `GEMINI_API_KEY` is not set, PitSense falls back to local deterministic rule-based replies.
-
----
-
-## Temporal Analysis
-
-PitSense maintains temporal context across multi-lap sessions using `SessionManager`:
-
-- **Sample Count**: Tracks total radio observations in the active session.
-- **Stress Trend**: Classifies multi-lap stress progression (`RISING`, `FALLING`, `STABLE`).
-- **Pace Trend & Direction**: Evaluates lap times relative to baseline (`SLOWER`, `FASTER`, `STABLE`).
-- **Pearson Correlation**: Computes correlation between driver stress and lap times when ≥ 3 paired data points exist.
-- **Non-Causal Association**: Formulates observable association statements (e.g., *"Observing elevated stress alongside +0.45s lap time degradation across 4 laps"*).
-- **Confidence Caps**: Single-observation sessions cap decision confidence at ≤ 0.55. Correlation is marked `INSUFFICIENT` until 3 paired samples are available.
-
----
-
-## Decision Engine
-
-The **Deterministic Race Engineer Decision Engine** (`backend/ai/decision_engine.py`) operates authoritatively:
-
-### Severity & Priority Levels
-- **`CRITICAL` / `CRITICAL`**: Stress ≥ 85, Emergency state, or critical vehicle issue with pace degradation.
-- **`STRESSED` / `HIGH`**: Sustained stress ≥ 65, or rising stress combined with slower lap times.
-- **`ELEVATED` / `MODERATE`**: Stress between 45–64 or slight pace drop.
-- **`CALM` / `LOW`**: Low stress (≤ 44), normal communication, stable pace.
-
-### Decision Vocabulary
-- `PIT_AND_INSPECT`: Box immediately for critical vehicle inspection/tyre change.
-- `RADIO_INTERVENTION`: Contact driver immediately to verify status or strategy.
-- `CHECK_VEHICLE`: Monitor telemetry diagnostic channels for reported vehicle anomaly.
-- `CHECK_DRIVER`: Maintain radio check and monitor sector pace.
-- `MONITOR_PERFORMANCE`: Monitor lap time degradation on upcoming sector splits.
-- `MONITOR`: Continue standard stint monitoring.
-- `NO_ACTION`: Maintain current stint plan.
-
----
-
-## Data Quality Model
-
-PitSense enforces explicit 4-state data quality mapping across all evidence outputs:
-
-- **`AVAILABLE`**: Complete telemetry and sufficient session history (≥ 3 paired samples for correlation).
-- **`PARTIAL`**: Telemetry present but missing specific fields (e.g. lap time present, sector times missing).
-- **`INSUFFICIENT`**: Telemetry present, but sample count (< 3) is too small for statistical correlation.
-- **`UNAVAILABLE`**: Telemetry missing, unmatched audio, or transcript unavailable.
-
-Missing telemetry explicitly reduces overall confidence rather than silently substituting fake data.
-
----
-
-## Persistence & Session Management
-
-Session state is persisted using a WAL-mode SQLite database (`backend/database/db.py`):
-
-- **Database Location**: `backend/data/pitsense.db` (overrideable via `PITSENSE_DB_PATH`).
-- **Tables**: `sessions` (active session tracking) and `temporal_observations` (ordered observation history, stress metrics, telemetry JSON, driver issues).
-- **Restart Resilience**: Backend restarts preserve session history, stress trends, active session IDs, and correlation calculations.
-- **Reset Operations**: Endpoint `POST /session/reset` clears individual or all persistent sessions.
-
----
-
-## Simulation Mode
-
-PitSense includes a Race Simulation Mode for automated session replay:
-
-- **Dataset Sample Discovery**: Dynamically scans `dataset/metadata.csv` and `dataset/audio/` to build a chronological playback sequence.
-- **Endpoints**: `GET /simulation/samples` lists samples; `GET /simulation/audio/{filename}` streams audio files.
-- **Replay Controls**: UI provides `START`, `PAUSE`, `NEXT`, and `RESET` simulation controls.
-
----
-
-## Dataset
-
-The PitSense dataset contains frozen OpenF1 telemetry and team radio samples:
-
-- **Metadata**: 250 rows in `dataset/metadata.csv` (189 `TELEMETRY_LINKED`, 61 `RADIO_ONLY`).
-- **Audio Files**: 157 `.mp3` audio recordings in `dataset/audio/`.
-- **Extended Data**: 5 extended sector/speed trap records in `dataset/openf1_extended.json`.
-- **Validation**: Endpoint `GET /dataset/validate` verifies dataset loader integrity against benchmark laps (`lap_04.mp3`, `lap_33.mp3`, `lap_44.mp3`, `lap_47.mp3`, `lap_52.mp3`).
-
----
-
-## API Reference
-
-| Endpoint | Method | Purpose | Key Parameters / Body |
-| --- | --- | --- | --- |
-| `/` | `GET` | Backend home check | None |
-| `/health` / `/status` | `GET` | Truthful component readiness & status (`READY`, `DEGRADED`, `UNAVAILABLE`) | None |
-| `/dataset/validate` | `GET` | Validates benchmark lap telemetry loading | None |
-| `/simulation/samples` | `GET` | Returns list of discovered simulation samples | None |
-| `/simulation/audio/{filename}` | `GET` | Serves simulation audio file | `filename` (path param) |
-| `/upload` | `POST` | Main audio perception, temporal analysis & decision pipeline | `file` (multipart/form-data), `session_id`, `lap`, `lap_time_seconds` |
-| `/session/reset` | `POST` | Resets specific or all session histories | `session_id` (query param) |
-| `/chat` | `POST` | Interactive Race Engineer Q&A | `ChatRequest` JSON (`question`, `transcript`, `telemetry`, etc.) |
-
----
-
-## Frontend Dashboard
-
-The frontend dashboard (`frontend/src/pages/Dashboard.jsx`) provides a dark-mode pit-wall interface:
-
-- **Upload & Live Recording**: Drag-and-drop audio file upload or live browser microphone recording.
-- **Driver State & Emotion Card**: Displays stress index gauge, urgency rating, primary emotion, and acoustic feature indicators.
-- **Transcript Card**: Displays transcribed driver radio speech.
-- **Telemetry Card & Performance Graph**: Displays real-time telemetry metrics, sector split times, speed traps, and Chart.js trend graphs.
-- **Decision Support Card**: Displays authoritative decision, severity badge, evidence reasons, and 4-state data quality badges.
-- **Race Engineer AI Chat**: Interactive chat interface for querying strategy and session context.
-- **Simulation Controls Bar**: Floating simulation playback bar with progress tracker.
-
----
-
-## Testing
-
-The PitSense backend includes a comprehensive, automated pytest suite covering dataset loaders, temporal analysis, decision logic, SQLite persistence, simulation endpoints, telemetry series contracts, and API hardening.
-
-### Test Execution Command
+### Running Backend Unit Tests
 
 **On Windows:**
 ```powershell
 .\backend\.venv\Scripts\python.exe -m pytest backend -v
 ```
 
-**On Linux/macOS:**
+**On Linux / macOS:**
 ```bash
 backend/.venv/bin/python -m pytest backend -v
 ```
 
-### Test Suite Status: 53 tests collected
+### Verified Test Suite (53 Passing Tests across 7 Test Files)
 
-| File | Tests |
-| --- | --- |
-| `backend/test_dataset_pipeline.py` | 8 |
-| `backend/test_phase7_8.py` | 10 |
-| `backend/test_phase9_persistence.py` | 13 |
-| `backend/test_phase9_simulation.py` | 11 |
-| `backend/test_phase10_hardening.py` | 6 |
-| `backend/test_telemetry.py` | 2 |
-| `backend/test_telemetry_contract.py` | 3 |
-| **Total** | **53** |
-
-> **Note**: One non-fatal `StarletteDeprecationWarning` is emitted on import of `fastapi.testclient`. This does not affect test results and will be resolved when `httpx2` is adopted upstream.
+| Test File | Verified Test Count | Target Subsystem |
+| --- | --- | --- |
+| `backend/test_dataset_pipeline.py` | 8 | OpenF1 telemetry loader & benchmark validation |
+| `backend/test_phase7_8.py` | 10 | ASR, emotion models & decision engine |
+| `backend/test_phase9_persistence.py` | 13 | SQLite WAL storage & session recovery |
+| `backend/test_phase9_simulation.py` | 11 | Race simulation discovery & replay API |
+| `backend/test_phase10_hardening.py` | 6 | API error handling & data contract edge cases |
+| `backend/test_telemetry.py` | 2 | Telemetry lookup & filename matching |
+| `backend/test_telemetry_contract.py` | 3 | Telemetry series normalisation & data quality |
+| **Total Verified** | **53** | **100% Passing Test Suite** |
 
 ---
 
-## Tech Stack
+## 🛠️ Troubleshooting
 
-| Domain | Technologies |
-| --- | --- |
-| **Backend** | Python 3.10+, FastAPI, Uvicorn, SQLite3 (WAL mode), Pydantic |
-| **ML / AI / Perception** | PyTorch, HuggingFace Transformers, `nvidia/parakeet-tdt-0.6b-v3` (ASR), `ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition` (Audio Emotion), `j-hartmann/emotion-english-distilroberta-base` (Text Emotion), Google Gemini 3.6 Flash (via REST API) |
-| **Audio Processing** | SoundFile, NumPy, FFmpeg |
-| **Frontend** | React 19, Vite 8, Tailwind CSS v4, Chart.js, Lucide React Icons, Axios |
-| **Testing** | pytest 9.1+, FastAPI TestClient, httpx |
+### 1. Python Not Found (`python is not recognized...`)
+- Ensure Python 3.10+ is installed from [python.org](https://www.python.org/).
+- Ensure **"Add Python to PATH"** was checked during installation.
+- In PowerShell, try running `py --version` or restarting PowerShell.
 
----
-
-## Local Setup & Execution
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- FFmpeg installed and available in system PATH.
-
-### 1. Set Up & Run Backend
-
-```bash
-cd backend
-python -m venv .venv
-
-# On Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source .venv/bin/activate
-
-pip install -r requirements.txt
-python -m uvicorn app:app --reload --port 8000
+### 2. PowerShell Script Execution Policy Error
+If running `.\setup.ps1` gives an execution policy error, run:
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\setup.ps1
 ```
 
-### 2. Set Up & Run Frontend
+### 3. Missing FFmpeg (`ffmpeg not found...`)
+- Parakeet ASR requires FFmpeg to convert audio formats (.mp3, .m4a, .webm) into 16kHz mono WAV.
+- **Windows (via Chocolatey or Scoop)**: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/) and add `bin` folder to system PATH.
+- **macOS**: `brew install ffmpeg`
+- **Linux (Ubuntu/Debian)**: `sudo apt update && sudo apt install ffmpeg`
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### 4. Model Download Failure (`setup_models.py`)
+- Check internet connectivity during initial download.
+- Re-run the downloader script:
+  ```powershell
+  .\backend\.venv\Scripts\python.exe setup_models.py
+  ```
+- Downloaded models are cached in `backend/models/`. Once downloaded, PitSense runs completely offline.
 
-Open `http://localhost:5173` in your browser.
+### 5. Gemini Unavailable / API Key Missing
+- If `GEMINI_API_KEY` is not set, PitSense operates seamlessly using local deterministic rule-based synthesis.
+- The UI status badge will show `DEGRADED` or `FALLBACK`, indicating Gemini is offline but deterministic intelligence is 100% active.
 
-### 3. Run Backend Test Suite
+### 6. Frontend Dependency Installation Issues
+- If `npm install` inside `frontend/` fails, ensure Node.js 18+ is installed (`node -v`).
+- Clear npm cache and reinstall:
+  ```bash
+  cd frontend
+  npm cache clean --force
+  npm install
+  ```
 
-```bash
-# From repository root:
-.\backend\.venv\Scripts\python.exe -m pytest backend -v
-```
-
----
-
-## Environment Variables
-
-Copy `backend/.env.example` to `backend/.env` and configure:
-
-```env
-# Optional: Gemini API key for natural-language synthesis.
-# If omitted or invalid, PitSense automatically uses local deterministic replies.
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.6-flash
-
-# Optional overrides (defaults work without setting these):
-# PITSENSE_DB_PATH=/path/to/pitsense.db
-# DATASET_METADATA_PATH=/path/to/metadata.csv
-# DATASET_EXTENDED_PATH=/path/to/openf1_extended.json
-```
+### 7. CPU Inference Speed
+- On basic laptops without GPU acceleration, ASR transcription using `nvidia/parakeet-tdt-0.6b-v3` can take 5–15 seconds per audio sample.
+- PyTorch is automatically installed with CPU optimizations by `setup.ps1`.
 
 ---
 
-## Engineering Design Principles
+## 📄 License & Author
 
-1. **Evidence Before Explanation**: Deterministic decision trees evaluate acoustic, textual, and telemetry signals before triggering natural-language summaries.
-2. **Explicit Uncertainty**: Data completeness is mapped to explicit states (`AVAILABLE`, `PARTIAL`, `INSUFFICIENT`, `UNAVAILABLE`) rather than fabricating missing metrics.
-3. **Graceful Degradation**: Missing API keys or telemetry mismatches fall back smoothly to local synthesis and `available=False` states without crashing.
-4. **Temporal Context Over Isolated Signals**: Evaluates multi-lap stress trends and pace deltas rather than treating every radio message in isolation.
-5. **Durable Session State**: Persists session observations in SQLite to survive server restarts.
-
----
-
-## Limitations
-
-- **Dataset Scope**: Currently backed by a frozen dataset of 250 metadata rows and 157 audio recordings.
-- **Audio Noise**: High acoustic engine/wind noise in race radio audio can impact ASR and speech emotion inference.
-- **Correlation Bounds**: Pearson correlation requires ≥ 3 paired lap observations; earlier observations report `INSUFFICIENT` correlation.
-- **Non-Causal Association**: Stress and pace correlations reflect mathematical co-occurrence rather than proven causality.
-- **Simulated Environment**: The current system processes pre-recorded and uploaded audio; it is not a live streaming pipeline.
-
----
-
-## Project Status
-
-PitSense is fully implemented, verified, and hardened:
-- ✅ **Perception & Stress Engine**: Nvidia Parakeet TDT ASR, Dual-Domain Emotion, Speech Acoustics.
-- ✅ **Telemetry Integration**: OpenF1 dataset loader, lap matching, sector splits, speed traps.
-- ✅ **Temporal Reasoning**: Multi-lap stress trends, baseline pace deltas, Pearson correlation.
-- ✅ **Deterministic Decision Support**: Authoritative severity, decision, and evidence generation.
-- ✅ **SQLite Persistence**: Durable session storage surviving server restarts.
-- ✅ **Simulation Replay Mode**: Automated session discovery and step-by-step playback.
-- ✅ **Dynamic Visualization**: Live telemetry cards, status indicators, Chart.js session graphs.
-- ✅ **53-test Suite**: Automated pytest suite across 7 test files.
-
----
-
-## License & Author
-
-Developed for PitSense AI Race Engineering.
-Author: Abhinav Gupta
+Developed for PitSense Motorsport Intelligence.  
+Author: Abhinav Gupta  
+Repository: [github.com/abhinavg138/PitSense](https://github.com/abhinavg138/PitSense)
