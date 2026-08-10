@@ -1,23 +1,33 @@
 # PitSense Backend Dependencies
-# ──────────────────────────────────────────────────────────────────────────────
-# Core API framework
+# ============================================================
+
+# Core API
 fastapi
 uvicorn
 python-multipart
 pydantic
 
-# ML / AI / Perception
-torch
+# ML / AI
 transformers
+huggingface_hub
 numpy
 soundfile
 
-# HTTP (used by Gemini fallback via urllib; requests used by dataset builder)
+# Audio / data
+librosa
+scipy
+pandas
+
+# HTTP / APIs
 requests
+httpx
+
+# Environment variables
+python-dotenv
 
 # Testing
 pytest
-httpx
 
-# Environment variable loading
-python-dotenv
+# NOTE:
+# PyTorch is installed separately by setup.ps1 using the
+# CPU-only PyTorch wheel for compatibility with basic laptops.
