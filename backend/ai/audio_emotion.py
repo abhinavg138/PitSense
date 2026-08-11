@@ -1,24 +1,12 @@
 """
 PitSense audio-domain emotion recognition.
 
-The Hugging Face checkpoint used here predates the modern
-Wav2Vec2ForSequenceClassification head. Its trained classification head is:
-
-    classifier.dense -> tanh -> classifier.output
-
-Modern Transformers expects:
-
-    projector -> classifier
-
-Using AutoModelForAudioClassification.from_pretrained() directly therefore
-loads the base Wav2Vec2 weights but leaves the modern classification head
-randomly initialized. This module avoids that problem by loading the
-checkpoint state dict manually and mapping the original trained head weights
-to the modern model's equivalent layers.
-
-No API key is required. The model is loaded from backend/models/audio_emotion
-when that local copy exists; otherwise the Hugging Face model ID is used as a
-fallback so existing development behavior is preserved.
+The Hugging Face checkpoint used here has two historical layouts. Older local
+copies contain the trained head as classifier.dense -> classifier.output,
+with a 1024-dimensional projection. Newer revisions use the modern
+Wav2Vec2ForSequenceClassification layout. This loader supports the older
+checkpoint without changing the user's installed Transformers/PyTorch
+versions.
 """
 
 import os
@@ -29,12 +17,10 @@ import torch.nn.functional as F
 from safetensors.torch import load_file
 from transformers import AutoConfig, AutoFeatureExtractor, AutoModelForAudioClassification
 
-
 _MODEL_ID = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
 _LOCAL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "models", "audio_emotion")
 )
-
 _LOCAL_MODEL_AVAILABLE = all(
     os.path.isfile(os.path.join(_LOCAL_PATH, filename))
     for filename in ("config.json", "model.safetensors", "preprocessor_config.json")
@@ -42,14 +28,8 @@ _LOCAL_MODEL_AVAILABLE = all(
 _MODEL_PATH = _LOCAL_PATH if _LOCAL_MODEL_AVAILABLE else _MODEL_ID
 
 _DEFAULT_LABELS = [
-    "angry",
-    "calm",
-    "disgust",
-    "fearful",
-    "happy",
-    "neutral",
-    "sad",
-    "surprised",
+    "angry", "calm", "disgust", "fearful",
+    "happy", "neutral", "sad", "surprised",
 ]
 
 _UNAVAILABLE = {"label": "unavailable", "confidence": 0.0, "probabilities": {}}
@@ -60,26 +40,28 @@ _load_error = None
 
 
 def _resolve_weight_file() -> str:
-    """Return the local safetensors file or use HF as the existing fallback."""
     local_weights = os.path.join(_LOCAL_PATH, "model.safetensors")
     if os.path.isfile(local_weights):
         return local_weights
 
     from huggingface_hub import hf_hub_download
-
     return hf_hub_download(repo_id=_MODEL_ID, filename="model.safetensors")
 
 
 def _load_model() -> tuple[Any, Any]:
-    """Build the modern model and load the checkpoint's trained head exactly."""
     config = AutoConfig.from_pretrained(_MODEL_PATH)
+
+    # The local checkpoint that produced the original UNEXPECTED/MISSING
+    # warning has a 1024 -> 1024 trained projection, while its config may
+    # advertise the newer 1024 -> 256 projection. Force the architecture to
+    # match the actual trained tensors before constructing the model.
+    config.classifier_proj_size = 1024
+
     model = AutoModelForAudioClassification.from_config(config)
 
     weights_path = _resolve_weight_file()
     state_dict = load_file(weights_path, device="cpu")
 
-    # The checkpoint's trained head uses the older names. Map those weights to
-    # the equivalent modern Transformers layers before loading the state dict.
     mapped_state = {}
     for key, value in state_dict.items():
         if key == "classifier.dense.weight":
@@ -94,8 +76,6 @@ def _load_model() -> tuple[Any, Any]:
             mapped_state[key] = value
 
     missing, unexpected = model.load_state_dict(mapped_state, strict=False)
-
-    # Do not allow a partially initialized emotion model into PitSense.
     if missing or unexpected:
         raise RuntimeError(
             "Audio emotion checkpoint could not be loaded exactly. "
@@ -105,7 +85,6 @@ def _load_model() -> tuple[Any, Any]:
     model.eval()
     feature_extractor = AutoFeatureExtractor.from_pretrained(_MODEL_PATH)
 
-    # Sanity-check that the trained classifier head is non-trivial.
     head_norm = float(model.classifier.weight.detach().norm().item())
     if head_norm < 0.5:
         raise RuntimeError(
@@ -117,8 +96,10 @@ def _load_model() -> tuple[Any, Any]:
 
 try:
     _model, _feature_extractor = _load_model()
-    source = "local" if _LOCAL_MODEL_AVAILABLE else "Hugging Face fallback"
-    print(f"[audio_emotion] Loaded trained Wav2Vec2 emotion checkpoint ({source}).")
+    print(
+        "[audio_emotion] Loaded trained Wav2Vec2 emotion checkpoint "
+        f"({'local' if _LOCAL_MODEL_AVAILABLE else 'Hugging Face fallback'})."
+    )
 except Exception as _exc:
     _load_error = _exc
     _model = None
@@ -126,7 +107,7 @@ except Exception as _exc:
     print(f"[audio_emotion] WARNING: model load failed — {_exc}")
 
 
-# Kept for compatibility with the existing admin/control-center code.
+# Compatibility with existing admin/control-center code.
 _pipe = _model
 
 
@@ -170,7 +151,7 @@ def analyze_audio_emotion(wav_path: str) -> dict:
                 input_values=inputs.input_values,
                 attention_mask=getattr(inputs, "attention_mask", None),
             )
-            probabilities = F.softmax(logits, dim=-1).squeeze(0).cpu().numpy()
+            probabilities = F.softmax(logits.logits, dim=-1).squeeze(0).cpu().numpy()
 
         if not isinstance(probabilities, np.ndarray) or probabilities.size == 0:
             return _UNAVAILABLE
