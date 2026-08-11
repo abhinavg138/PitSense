@@ -27,7 +27,6 @@
   .compact-stat strong { font-size: 22px !important; }
 }
 
-/* Extra-tight laptop/900p mode. */
 @media (min-width: 1100px) and (max-height: 850px) {
   .hero-panel { min-height: 395px; height: 395px; }
   .hero-content { padding-top: 46px; }
@@ -37,4 +36,49 @@
   .module-card { min-height: 132px; }
   .four-stat-row { margin-top: 8px !important; }
   .compact-stat { min-height: 68px !important; }
+}
+
+/* Radio command: driver state | radio command | recommendation */
+.radio-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(260px, .95fr);
+  gap: 14px;
+  align-items: stretch;
+}
+.radio-command-card {
+  border-radius: 18px;
+  padding: 18px;
+  min-height: 100%;
+  background: linear-gradient(180deg, rgba(16,18,25,.94), rgba(7,9,13,.90));
+  border: 1px solid rgba(191,90,242,.26);
+  box-shadow: 0 18px 42px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+.radio-command-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.radio-command-live { display:flex; align-items:center; gap:5px; color:#ff453a; font-size:9px; font-weight:800; letter-spacing:.08em; }
+.radio-command-wave-row { display:grid; grid-template-columns:36px 1fr 34px; align-items:center; gap:10px; margin-top:14px; }
+.radio-play { width:36px; height:36px; border-radius:50%; display:grid; place-items:center; color:#fff; background:rgba(191,90,242,.16); border:1px solid rgba(191,90,242,.36); cursor:pointer; }
+.radio-command-wave { height:38px; display:flex; align-items:center; gap:2px; overflow:hidden; }
+.radio-command-wave i { width:2px; flex:0 0 2px; border-radius:99px; background:#bf5af2; box-shadow:0 0 7px rgba(191,90,242,.22); }
+.radio-duration { color:#8b929c; font-size:10px; text-align:right; }
+.radio-command-transcript { margin-top:11px; color:#f0f1f4; font-size:14px; line-height:1.45; }
+.radio-command-label { display:flex; align-items:center; gap:6px; color:#8f96a1; font-size:9px; font-weight:800; letter-spacing:.08em; margin-top:14px; }
+.radio-command-interpretation { margin-top:8px; padding:10px 11px; border-radius:11px; color:#cfd4db; font-size:10px; line-height:1.5; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); }
+.radio-command-signals { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-top:10px; border-radius:11px; overflow:hidden; border:1px solid rgba(255,255,255,.05); }
+.radio-command-signals span { min-width:0; padding:8px 7px; display:flex; flex-direction:column; gap:4px; color:#7d8590; font-size:8px; background:rgba(255,255,255,.018); border-right:1px solid rgba(255,255,255,.05); }
+.radio-command-signals span:last-child { border-right:0; }
+.radio-command-signals b { color:#e8ebef; font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sig-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+.sig-dot.stress { background:#ff453a; box-shadow:0 0 6px #ff453a; }
+.sig-dot.urgency { background:#ff9f0a; box-shadow:0 0 6px #ff9f0a; }
+.sig-dot.confidence { background:#30d158; box-shadow:0 0 6px #30d158; }
+.radio-response-row { display:grid; grid-template-columns:1fr auto; gap:9px; align-items:stretch; margin-top:8px; }
+.radio-response-copy { min-height:48px; display:flex; align-items:center; padding:9px 10px; border-radius:11px; color:#d9dde2; font-size:10px; line-height:1.4; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.06); }
+.radio-send { display:flex; align-items:center; justify-content:center; gap:6px; min-width:108px; border-radius:11px; border:1px solid rgba(191,90,242,.32); background:linear-gradient(180deg,rgba(191,90,242,.30),rgba(105,34,143,.28)); color:#fff; font-size:10px; font-weight:800; cursor:pointer; }
+@media (min-width:1100px) and (max-height:950px) {
+  .radio-command-card { padding:14px; }
+  .radio-command-transcript { font-size:12px; }
+  .radio-command-interpretation { font-size:9px; }
+  .radio-command-signals span { padding:7px 6px; }
+  .radio-response-copy { min-height:42px; font-size:9px; }
 }
