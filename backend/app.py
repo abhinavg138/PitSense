@@ -1,11 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, Form, Header, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 import os
 import shutil
 import re
+import platform
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
@@ -23,6 +24,7 @@ from ai.temporal_engine import (
 from ai.temporal_analysis import analyze_temporal_session
 from ai.decision_engine import evaluate_engineer_decision
 from ai.recommendation_engine import generate_actionable_insight
+from ai import asr_model, audio_emotion, emotion_model
 from dataset_loader import (
     get_telemetry_for_file,
     run_dataset_validation,
@@ -32,7 +34,6 @@ from dataset_loader import (
 )
 from telemetry_contract import build_telemetry_series
 from pydantic import BaseModel
-
 
 
 class ChatRequest(BaseModel):
@@ -48,6 +49,7 @@ class ChatRequest(BaseModel):
 
 
 DATASET_AUDIO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dataset", "audio"))
+ADMIN_DIR = os.path.join(os.path.dirname(__file__), "admin")
 
 app = FastAPI()
 
@@ -67,11 +69,14 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-@app.get("/")
+@app.get("/", response_class=RedirectResponse)
 def home():
-    return {
-        "message": "PitSense Backend Running 🚀"
-    }
+    return RedirectResponse(url="/admin/", status_code=307)
+
+
+@app.get("/admin/", response_class=FileResponse)
+def admin_home():
+    return FileResponse(os.path.join(ADMIN_DIR, "index.html"))
 
 
 @app.get("/health")
@@ -113,6 +118,100 @@ def health_check():
     }
 
 
+@app.get("/admin/api/overview")
+def admin_overview(diagnostic: bool = False):
+    """Read-only operational data for the local PitSense Control Center."""
+    dataset_ready = os.path.exists(DATASET_AUDIO_DIR)
+    telemetry_ready = bool(load_dataset_metadata())
+    gemini_configured = bool(
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        and os.environ.get("GEMINI_API_KEY", "") != "YOUR_GEMINI_API_KEY"
+    )
+
+    asr_loaded = bool(getattr(asr_model, "asr", None))
+    audio_loaded = getattr(audio_emotion, "_pipe", None) is not None
+    text_loaded = getattr(emotion_model, "emotion_pipeline", None) is not None
+
+    model_status = {
+        "parakeet": {
+            "name": "Parakeet TDT 0.6B",
+            "role": "Speech-to-text",
+            "model_id": "nvidia/parakeet-tdt-0.6b-v3",
+            "local_path": getattr(asr_model, "_LOCAL_PATH", "backend/models/parakeet"),
+            "status": "READY" if asr_loaded else "UNAVAILABLE",
+        },
+        "audio_emotion": {
+            "name": "Wav2Vec2 XLSR",
+            "role": "Audio emotion recognition",
+            "model_id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
+            "local_path": getattr(audio_emotion, "_LOCAL_PATH", "backend/models/audio_emotion"),
+            "status": "READY" if audio_loaded else "UNAVAILABLE",
+        },
+        "text_emotion": {
+            "name": "DistilRoBERTa Emotion",
+            "role": "Text emotion classification",
+            "model_id": "j-hartmann/emotion-english-distilroberta-base",
+            "local_path": getattr(emotion_model, "_LOCAL_PATH", "backend/models/text_emotion"),
+            "status": "READY" if text_loaded else "UNAVAILABLE",
+        },
+    }
+
+    sessions = []
+    latest_observation = None
+    for session_id, observations in getattr(session_manager, "_sessions", {}).items():
+        latest = observations[-1] if observations else None
+        if latest:
+            latest_observation = latest
+        sessions.append({
+            "session_id": session_id,
+            "observation_count": len(observations),
+            "latest_timestamp": latest.get("timestamp") if latest else None,
+            "latest_stress": latest.get("stress") if latest else None,
+            "latest_stress_state": latest.get("stress_state") if latest else None,
+            "latest_lap": latest.get("lap") if latest else None,
+            "latest_lap_time": latest.get("lap_time_seconds") if latest else None,
+            "telemetry_available": bool(latest and latest.get("telemetry", {}).get("available")),
+        })
+
+    diagnostics = {
+        "backend": "READY",
+        "database": "READY" if getattr(session_manager, "_sessions", None) is not None else "UNAVAILABLE",
+        "parakeet": model_status["parakeet"]["status"],
+        "audio_emotion": model_status["audio_emotion"]["status"],
+        "text_emotion": model_status["text_emotion"]["status"],
+        "dataset": "READY" if dataset_ready else "UNAVAILABLE",
+        "telemetry": "READY" if telemetry_ready else "DEGRADED",
+        "gemini": "READY" if gemini_configured else "FALLBACK",
+    }
+
+    if any(v == "UNAVAILABLE" for v in diagnostics.values()):
+        overall = "UNAVAILABLE"
+    elif any(v in ("DEGRADED", "FALLBACK") for v in diagnostics.values()):
+        overall = "DEGRADED"
+    else:
+        overall = "READY"
+
+    return {
+        "status": overall,
+        "components": {
+            "backend": diagnostics["backend"],
+            "asr_model": diagnostics["parakeet"],
+            "audio_emotion_model": diagnostics["audio_emotion"],
+            "text_emotion_model": diagnostics["text_emotion"],
+            "dataset": diagnostics["dataset"],
+            "telemetry": diagnostics["telemetry"],
+            "gemini": diagnostics["gemini"],
+        },
+        "diagnostics": diagnostics if diagnostic else diagnostics,
+        "models": model_status,
+        "sessions": sessions,
+        "active_session": getattr(session_manager, "_active_session_id", None),
+        "latest_observation": latest_observation,
+        "runtime": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
+    }
 
 
 @app.get("/dataset/validate")
@@ -169,21 +268,13 @@ async def upload_audio(
         stress_index = compute_stress_index(audio_emotion, speech_features, transcript)
         ai_brief     = generate_summary_with_source(transcript, emotion, driver_state)
 
-        # Session tracking
         active_session_id = session_id or x_session_id or session or "default_session"
-
-        # Lookup telemetry metadata from dataset (returns None if not matched)
         raw_telemetry = get_telemetry_for_file(file.filename)
-
-        # Normalise: always return a telemetry object — available=False when unmatched
         telemetry_response = raw_telemetry if raw_telemetry else {"available": False}
-
-        # Build a human-readable context string for the Race Engineer
         telemetry_context = build_telemetry_context_string(raw_telemetry)
         if telemetry_context:
             print(f"[TELEMETRY] Attached to analysis for {file.filename}")
 
-        # Attempt to extract lap and lap_time from telemetry or filename if not explicitly provided
         effective_lap = lap
         if effective_lap is None:
             if raw_telemetry and raw_telemetry.get("lap") is not None:
@@ -197,7 +288,6 @@ async def upload_audio(
         if effective_lap_time is None and raw_telemetry and raw_telemetry.get("lap_time") is not None:
             effective_lap_time = raw_telemetry["lap_time"]
 
-        # Record observation in session history
         obs = {
             "timestamp": datetime.now().isoformat(),
             "filename": file.filename,
@@ -213,12 +303,9 @@ async def upload_audio(
         history = session_manager.get_history(active_session_id)
         telemetry_series = build_telemetry_series(history)
 
-        # Phase 7 — Temporal Stress & Lap-Time Correlation Analysis
         temporal_analysis   = analyze_temporal_session(history)
         lap_performance     = analyze_lap_performance(history)
         engineering_insight = generate_engineering_insight(temporal_analysis, lap_performance, driver_state)
-
-        # Phase 8 — Engineer Decision Support Engine
         engineer_decision   = evaluate_engineer_decision(
             driver_state=driver_state,
             stress_index=stress_index,
@@ -226,8 +313,6 @@ async def upload_audio(
             audio_emotion=audio_emotion,
             transcript=transcript,
         )
-
-        # Phase 5 — Actionable Recommendation Engine
         actionable_insight  = generate_actionable_insight(
             driver_state=driver_state,
             stress_index=stress_index,
@@ -238,39 +323,30 @@ async def upload_audio(
         )
 
         return {
-            "success":                    True,
-            "filename":                   file.filename,
-            # Telemetry — always present, available=True/False
-            "telemetry":                  telemetry_response,
-            "telemetry_series":           telemetry_series,
-            "telemetry_context":          telemetry_context,
-            "transcript":                 transcript,
-            "emotion":                    emotion,
-            "driver_analysis":            driver_state,
-            "ai_summary":                 ai_brief["summary"],
-            "engineer_reply":             ai_brief["engineer_reply"],
-            "ai_source":                  ai_brief["ai_source"],
-            # Phase 1 — HF audio perception
-            "audio_emotion":              audio_emotion,
-            # Phase 2 — Explainable Stress Index
-            "stress_index":               stress_index,
-            # Phase 7 — Temporal Stress & Lap-Time Correlation
-            "temporal_analysis":          temporal_analysis,
-            # Phase 8 — Engineer Decision Support Engine
-            "engineer_decision":          engineer_decision,
-            # Phase 4 — Lap Performance Correlation
-            "lap_performance":            lap_performance,
-            # Decision Support Insights
-            "engineering_insight":        engineering_insight,
+            "success": True,
+            "filename": file.filename,
+            "telemetry": telemetry_response,
+            "telemetry_series": telemetry_series,
+            "telemetry_context": telemetry_context,
+            "transcript": transcript,
+            "emotion": emotion,
+            "driver_analysis": driver_state,
+            "ai_summary": ai_brief["summary"],
+            "engineer_reply": ai_brief["engineer_reply"],
+            "ai_source": ai_brief["ai_source"],
+            "audio_emotion": audio_emotion,
+            "stress_index": stress_index,
+            "temporal_analysis": temporal_analysis,
+            "engineer_decision": engineer_decision,
+            "lap_performance": lap_performance,
+            "engineering_insight": engineering_insight,
             "engineering_recommendation": actionable_insight,
         }
 
     except Exception as e:
-        # Surface a useful message to the frontend instead of a raw 500.
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
     finally:
-        # Always clean up the uploaded file — we don't need it after processing.
         if os.path.exists(filepath):
             os.remove(filepath)
 
@@ -287,7 +363,6 @@ def reset_session(session_id: Optional[str] = Query(None)):
 
 @app.post("/chat")
 async def chat_with_race_engineer(req: ChatRequest):
-    # Build telemetry context string from session telemetry if present
     tel = req.telemetry or {}
     tel_context = build_telemetry_context_string(tel if tel.get("available") else None)
 
