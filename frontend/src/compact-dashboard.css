@@ -1,0 +1,40 @@
+/* Compact desktop dashboard layout for 900px-height screens. */
+@media (min-width: 1100px) and (max-height: 950px) {
+  .content-wrap { padding: 14px 28px 28px; }
+  .hero-panel { min-height: 440px; height: 440px; }
+  .hero-topbar { top: 14px; right: 22px; }
+  .hero-content { padding: 52px 34px 0; gap: 24px; }
+  .hero-copy { padding-top: 12px; }
+  .brand-wordmark { font-size: 56px; }
+  .hero-kicker { margin-top: 10px; font-size: 17px; }
+  .hero-copy p { margin: 16px 0 20px; font-size: 16px; line-height: 1.42; }
+  .primary-btn, .secondary-btn { padding: 11px 16px; font-size: 13px; }
+  .live-insight { width: 286px; margin-top: 14px; padding: 15px; }
+  .live-insight p { font-size: 14px; margin: 11px 0; }
+  .waveform { height: 48px; margin: 7px 0; }
+  .section-block { margin-top: -2px; }
+  .section-title { margin-bottom: 9px; font-size: 11px; }
+  .module-grid { gap: 10px; }
+  .module-card { min-height: 145px; padding: 12px; border-radius: 14px; }
+  .module-top { gap: 7px; }
+  .module-icon { width: 32px; height: 32px; border-radius: 10px; }
+  .module-title { font-size: 13px; }
+  .module-status { font-size: 9px; }
+  .module-subtitle { font-size: 10px; margin-top: 8px; }
+  .module-visual { transform: scale(.9); transform-origin: bottom center; }
+  .four-stat-row { margin-top: 10px !important; gap: 10px !important; }
+  .compact-stat { min-height: 76px !important; padding: 11px 14px !important; }
+  .compact-stat strong { font-size: 22px !important; }
+}
+
+/* Extra-tight laptop/900p mode. */
+@media (min-width: 1100px) and (max-height: 850px) {
+  .hero-panel { min-height: 395px; height: 395px; }
+  .hero-content { padding-top: 46px; }
+  .brand-wordmark { font-size: 50px; }
+  .hero-copy p { margin: 13px 0 17px; font-size: 15px; }
+  .live-insight { width: 270px; }
+  .module-card { min-height: 132px; }
+  .four-stat-row { margin-top: 8px !important; }
+  .compact-stat { min-height: 68px !important; }
+}
