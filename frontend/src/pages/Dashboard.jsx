@@ -8,453 +8,197 @@ import DecisionCard from "../components/dashboard/DecisionCard";
 import SimulationControls from "../components/dashboard/SimulationControls";
 import EngineerChat from "../components/engineer/EngineerChat";
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-    Activity,
-    Brain,
-    Zap,
-    TrendingUp,
-} from "lucide-react";
-import {
-    loadSessions,
-    saveSessions,
-    loadActiveSessionId,
-    saveActiveSessionId,
-    generateTitle
-} from "../utils/sessions";
-import API, {
-    fetchSimulationSamples,
-    fetchSimulationAudioBlob,
-    resetBackendSession,
-} from "../services/api";
+import { Activity, Brain, Zap, TrendingUp, Sparkles, Radio, Gauge, Route, Cpu, Flag, MessageSquare, BarChart3 } from "lucide-react";
+import { loadSessions, saveSessions, loadActiveSessionId, saveActiveSessionId, generateTitle } from "../utils/sessions";
+import API, { fetchSimulationSamples, fetchSimulationAudioBlob, resetBackendSession } from "../services/api";
 
-/* ── Stat color helper ── */
 function getStatColor(key, value) {
-    if (key === "stress")  return value >= 80 ? "#FF453A" : value >= 50 ? "#FF9F0A" : "#30D158";
-    if (key === "urgency") return value >= 80 ? "#FF453A" : value >= 50 ? "#FF9F0A" : "#FFD60A";
-    return "#0A84FF";
+    if (key === "stress") return value >= 80 ? "#ff453a" : value >= 50 ? "#ff9f0a" : "#30d158";
+    if (key === "urgency") return value >= 80 ? "#ff453a" : value >= 50 ? "#ff9f0a" : "#ffd60a";
+    return "#0a84ff";
 }
 
-/* ── Stat Card ── */
-function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
+function MiniBars({ color }) {
+    return <div className="flex items-end gap-1 h-10 opacity-80">{Array.from({ length: 22 }).map((_, i) => <span key={i} className="w-1 rounded-full" style={{ height: `${12 + ((i * 17) % 27)}px`, background: color }} />)}</div>;
+}
+
+function ModuleCard({ icon: Icon, title, subtitle, color, visual = "bars", status = "Online" }) {
     return (
-        <div
-            className="rounded-3xl p-6 cursor-default animate-fade-in-up"
-            style={{
-                background: "rgba(255,255,255,0.04)",
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
-                border: "1px solid rgba(255,255,255,0.05)",
-                boxShadow: "0 2px 16px rgba(0,0,0,0.25)",
-                animationDelay: `${delay}ms`,
-                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
-            }}
-            onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = `0 12px 40px rgba(0,0,0,0.35), 0 0 0 1px ${color}15`;
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 2px 16px rgba(0,0,0,0.25)";
-            }}
-        >
-            <div className="flex items-center justify-between mb-5">
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em]"
-                    style={{ color: "#52525B" }}>
-                    {label}
-                </p>
-                <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
-                    style={{ background: `${color}12`, border: `1px solid ${color}20` }}>
-                    <Icon size={15} style={{ color }} />
+        <div className="module-card" style={{ "--module": color }}>
+            <div className="module-top">
+                <div className="module-icon"><Icon size={19} /></div>
+                <span className="module-title">{title}</span>
+                <span className="module-status"><span />{status}</span>
+            </div>
+            <div className="module-subtitle">{subtitle}</div>
+            <div className="module-visual">
+                {visual === "bars" ? <MiniBars color={color} /> : visual === "wave" ? <div className="module-wave">{Array.from({ length: 30 }).map((_, i) => <i key={i} style={{ height: `${8 + ((i * 13) % 30)}px`, background: color }} />)}</div> : <div className="module-orbit" style={{ borderColor: `${color}55`, "--module": color }}><span /></div>}
+            </div>
+        </div>
+    );
+}
+
+function OverviewCard({ analysis }) {
+    const stress = analysis?.stress_index?.stress_index ?? analysis?.driver_analysis?.stress ?? 0;
+    const driver = analysis?.driver_analysis?.driver_state || "Calm";
+    const emotion = analysis?.emotion?.emotion || "Nominal";
+    return (
+        <div className="overview-card glass-card">
+            <div className="section-head"><span>DRIVER STATE SNAPSHOT</span><b><i /> Live</b></div>
+            <div className="driver-grid">
+                <div className="stress-ring" style={{ "--stress": Math.max(0, Math.min(100, stress)) }}>
+                    <div><strong>{Math.round(stress)}%</strong><small>Stress Level</small><em>{stress >= 80 ? "HIGH" : stress >= 50 ? "ELEVATED" : "LOW"}</em></div>
+                </div>
+                <div className="driver-metrics">
+                    {[
+                        ["Stress", stress, "#ff453a", Gauge],
+                        ["Focus", Math.max(0, 100 - Math.round(stress * 0.35)), "#ff9f0a", Zap],
+                        ["Fatigue", Math.max(0, Math.round(stress * 0.7)), "#ffd60a", Activity],
+                        ["Confidence", Math.max(0, 100 - Math.round(stress * 0.2)), "#30d158", Sparkles],
+                        ["Composure", Math.max(0, 100 - Math.round(stress * 0.45)), "#0a84ff", Brain],
+                    ].map(([label, value, color, Icon]) => <div className="metric-row" key={label}><Icon size={15} style={{ color }} /><span>{label}</span><div className="metric-bar"><i style={{ width: `${value}%`, background: color }} /></div><b>{value}%</b></div>)}
                 </div>
             </div>
-            <p className="text-3xl font-extrabold tracking-tight capitalize"
-                style={{ color }}>
-                {value}
-            </p>
+            <div className="driver-chip-row"><span className="state-chip">{driver}</span><span className="state-chip soft">{emotion}</span></div>
+        </div>
+    );
+}
+
+function StressCard({ analysis }) {
+    const stress = analysis?.stress_index?.stress_index ?? analysis?.driver_analysis?.stress ?? 0;
+    return (
+        <div className="trend-card glass-card">
+            <div className="section-head"><span>STRESS TREND</span><select defaultValue="50"><option value="50">Last 50 Laps</option><option value="20">Last 20 Laps</option><option value="10">Last 10 Laps</option></select></div>
+            <div className="chart-wrap">
+                <svg viewBox="0 0 520 190" preserveAspectRatio="none" className="stress-chart">
+                    <defs><linearGradient id="stressFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#ff453a" stopOpacity=".38"/><stop offset="1" stopColor="#ff453a" stopOpacity="0"/></linearGradient></defs>
+                    <g stroke="rgba(255,255,255,.07)" strokeWidth="1"><line x1="0" y1="30" x2="520" y2="30"/><line x1="0" y1="92" x2="520" y2="92"/><line x1="0" y1="154" x2="520" y2="154"/></g>
+                    <path d="M0 122 C28 102,44 116,63 88 S98 100,119 76 S151 92,173 69 S205 90,227 104 S262 126,284 96 S322 78,344 91 S382 72,402 83 S438 62,463 70 S491 57,520 68 L520 190 L0 190 Z" fill="url(#stressFill)"/>
+                    <path d="M0 122 C28 102,44 116,63 88 S98 100,119 76 S151 92,173 69 S205 90,227 104 S262 126,284 96 S322 78,344 91 S382 72,402 83 S438 62,463 70 S491 57,520 68" fill="none" stroke="#ff453a" strokeWidth="3"/>
+                </svg>
+                <div className="chart-labels"><span>Lap 10</span><span>Lap 20</span><span>Lap 30</span><span>Lap 40</span><span>Lap 50</span><span>Now</span></div>
+                <div className="chart-current" style={{ left: "78%" }}>{Math.round(stress)}%</div>
+            </div>
+        </div>
+    );
+}
+
+function RecommendationCard({ analysis }) {
+    const recommendation = analysis?.engineering_recommendation || analysis?.engineer_decision?.recommendation || analysis?.ai_summary || "Monitor driver stress and review the latest radio communication.";
+    const confidence = analysis?.engineer_decision?.confidence ?? analysis?.stress_index?.confidence ?? 92;
+    return (
+        <div className="recommend-card glass-card">
+            <div className="section-head"><span>RECOMMENDATION</span></div>
+            <div className="recommend-icon"><Flag size={24} /></div>
+            <div className="priority-pill">◆ HIGH PRIORITY</div>
+            <h3>{String(recommendation).replace(/\s+/g, " ").slice(0, 120)}</h3>
+            <div className="confidence-row"><span>Confidence</span><b>{Math.round(confidence)}%</b></div>
+            <div className="confidence-bar"><i style={{ width: `${Math.max(0, Math.min(100, confidence))}%` }} /></div>
+            <div className="recommend-meta"><span>Category <b>Strategy</b></span><span>Timing <b>Immediate</b></span></div>
         </div>
     );
 }
 
 export default function Dashboard() {
-
-    /* ── Session state ── */
-    const [sessions, setSessions]             = useState(() => loadSessions());
+    const [sessions, setSessions] = useState(() => loadSessions());
     const [activeSessionId, setActiveSessionId] = useState(() => loadActiveSessionId());
-    const [analysis, setAnalysis]             = useState(null);
-    const [uploadKey, setUploadKey]           = useState(0);
-    const [searchQuery, setSearchQuery]       = useState("");
+    const [analysis, setAnalysis] = useState(null);
+    const [uploadKey, setUploadKey] = useState(0);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [mode, setMode] = useState("manual");
+    const [samples, setSamples] = useState([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [simulationState, setSimulationState] = useState("idle");
+    const [delaySeconds, setDelaySeconds] = useState(2);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const timerRef = useRef(null);
 
-    /* ── Race Simulation state ── */
-    const [mode, setMode]                     = useState("manual"); // "manual" | "simulation"
-    const [samples, setSamples]               = useState([]);
-    const [currentIndex, setCurrentIndex]     = useState(0);
-    const [simulationState, setSimulationState] = useState("idle"); // "idle" | "running" | "paused" | "completed"
-    const [delaySeconds, setDelaySeconds]     = useState(2);
-    const [isProcessing, setIsProcessing]     = useState(false);
-    const timerRef                            = useRef(null);
+    useEffect(() => { if (mode === "simulation" && samples.length === 0) fetchSimulationSamples().then(data => setSamples(data || [])).catch(console.error); }, [mode, samples.length]);
+    useEffect(() => { if (activeSessionId) { const session = sessions.find(s => s.id === activeSessionId); if (session?.analysis) setAnalysis(session.analysis); else setActiveSessionId(null); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { saveSessions(sessions); }, [sessions]);
+    useEffect(() => { saveActiveSessionId(activeSessionId); }, [activeSessionId]);
 
-    /* Fetch simulation samples when entering simulation mode */
-    useEffect(() => {
-        if (mode === "simulation" && samples.length === 0) {
-            fetchSimulationSamples()
-                .then(data => {
-                    setSamples(data || []);
-                })
-                .catch(err => {
-                    console.error("Failed to load simulation samples:", err);
-                });
-        }
-    }, [mode, samples.length]);
-
-    /* Restore active session on mount */
-    useEffect(() => {
-        if (activeSessionId) {
-            const session = sessions.find(s => s.id === activeSessionId);
-            if (session?.analysis) {
-                setAnalysis(session.analysis);
-            } else {
-                setActiveSessionId(null);
-            }
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    /* Persist sessions & activeSessionId */
-    useEffect(() => {
-        saveSessions(sessions);
-    }, [sessions]);
-
-    useEffect(() => {
-        saveActiveSessionId(activeSessionId);
-    }, [activeSessionId]);
-
-    /* Active Session Object */
     const activeSession = sessions.find(s => s.id === activeSessionId) || null;
+    const handleAnalysis = useCallback((data) => { const session = { id: Date.now().toString(), title: generateTitle(data.transcript), timestamp: Date.now(), transcript: data.transcript || "", analysis: data, chat: [] }; setAnalysis(data); setSessions(prev => [session, ...prev]); setActiveSessionId(session.id); }, []);
+    const handleNewAnalysis = useCallback(() => { setAnalysis(null); setActiveSessionId(null); setUploadKey(k => k + 1); }, []);
+    const handleSelectSession = useCallback((sessionId) => { const session = sessions.find(s => s.id === sessionId); if (session?.analysis) { setAnalysis(session.analysis); setActiveSessionId(sessionId); setUploadKey(k => k + 1); } }, [sessions]);
+    const handleDeleteSession = useCallback((sessionId) => { setSessions(prev => prev.filter(s => s.id !== sessionId)); if (activeSessionId === sessionId) { setAnalysis(null); setActiveSessionId(null); setUploadKey(k => k + 1); } }, [activeSessionId]);
+    const handleRenameSession = useCallback((sessionId, newTitle) => setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s)), []);
+    const handleUpdateChat = useCallback((newChatMessages) => { if (!activeSessionId) return; setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, chat: newChatMessages } : s)); }, [activeSessionId]);
 
-    /* Handlers for manual mode */
-    const handleAnalysis = useCallback((data) => {
-        setAnalysis(data);
-
-        const session = {
-            id: Date.now().toString(),
-            title: generateTitle(data.transcript),
-            timestamp: Date.now(),
-            transcript: data.transcript || "",
-            analysis: data,
-            chat: []
-        };
-
-        setSessions(prev => [session, ...prev]);
-        setActiveSessionId(session.id);
-    }, []);
-
-    const handleNewAnalysis = useCallback(() => {
-        setAnalysis(null);
-        setActiveSessionId(null);
-        setUploadKey(k => k + 1);
-    }, []);
-
-    const handleSelectSession = useCallback((sessionId) => {
-        const session = sessions.find(s => s.id === sessionId);
-        if (session?.analysis) {
-            setAnalysis(session.analysis);
-            setActiveSessionId(sessionId);
-            setUploadKey(k => k + 1);
-        }
-    }, [sessions]);
-
-    const handleDeleteSession = useCallback((sessionId) => {
-        setSessions(prev => prev.filter(s => s.id !== sessionId));
-        if (activeSessionId === sessionId) {
-            setAnalysis(null);
-            setActiveSessionId(null);
-            setUploadKey(k => k + 1);
-        }
-    }, [activeSessionId]);
-
-    const handleRenameSession = useCallback((sessionId, newTitle) => {
-        setSessions(prev =>
-            prev.map(s => s.id === sessionId ? { ...s, title: newTitle } : s)
-        );
-    }, []);
-
-    const handleUpdateChat = useCallback((newChatMessages) => {
-        if (!activeSessionId) return;
-        setSessions(prev =>
-            prev.map(s => s.id === activeSessionId ? { ...s, chat: newChatMessages } : s)
-        );
-    }, [activeSessionId]);
-
-    /* ── Simulation processing engine ── */
     const processSampleAtIndex = useCallback(async (idx, sampleList) => {
-        const targetList = sampleList || samples;
-        if (!targetList || idx < 0 || idx >= targetList.length) {
-            setSimulationState("completed");
-            return null;
-        }
-
-        setIsProcessing(true);
-        const sample = targetList[idx];
-
-        try {
-            const blob = await fetchSimulationAudioBlob(sample.filename);
-            const formData = new FormData();
-            formData.append("file", blob, sample.filename);
-            formData.append("session_id", "simulation_session");
-            if (sample.lap !== null && sample.lap !== undefined) {
-                formData.append("lap", sample.lap.toString());
-            }
-            if (sample.lap_time !== null && sample.lap_time !== undefined) {
-                formData.append("lap_time_seconds", sample.lap_time.toString());
-            }
-
-            const res = await API.post("/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-
-            const data = res.data;
-            setAnalysis(data);
-
-            // Record as session item for sidebar
-            const sessionObj = {
-                id: `sim_${Date.now()}_${idx}`,
-                title: `[Sim] Lap ${sample.lap || idx + 1} - ${sample.driver_name || sample.filename}`,
-                timestamp: Date.now(),
-                transcript: data.transcript || "",
-                analysis: data,
-                chat: []
-            };
-
-            setSessions(prev => [sessionObj, ...prev.filter(s => s.id !== sessionObj.id)]);
-            setActiveSessionId(sessionObj.id);
-            return data;
-        } catch (err) {
-            console.error(`Simulation processing error on sample ${sample.filename}:`, err);
-            return null;
-        } finally {
-            setIsProcessing(false);
-        }
+        const targetList = sampleList || samples; if (!targetList || idx < 0 || idx >= targetList.length) { setSimulationState("completed"); return null; }
+        setIsProcessing(true); const sample = targetList[idx];
+        try { const blob = await fetchSimulationAudioBlob(sample.filename); const formData = new FormData(); formData.append("file", blob, sample.filename); formData.append("session_id", "simulation_session"); if (sample.lap != null) formData.append("lap", sample.lap.toString()); if (sample.lap_time != null) formData.append("lap_time_seconds", sample.lap_time.toString()); const res = await API.post("/upload", formData, { headers: { "Content-Type": "multipart/form-data" } }); const data = res.data; setAnalysis(data); const sessionObj = { id: `sim_${Date.now()}_${idx}`, title: `[Sim] Lap ${sample.lap || idx + 1} - ${sample.driver_name || sample.filename}`, timestamp: Date.now(), transcript: data.transcript || "", analysis: data, chat: [] }; setSessions(prev => [sessionObj, ...prev.filter(s => s.id !== sessionObj.id)]); setActiveSessionId(sessionObj.id); return data; } catch (err) { console.error(`Simulation processing error on sample ${sample.filename}:`, err); return null; } finally { setIsProcessing(false); }
     }, [samples]);
-
-    /* Clear simulation timer */
-    const clearSimTimer = useCallback(() => {
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-        }
-    }, []);
-
-    /* Simulation Control Callbacks */
-    const handleStartSimulation = useCallback(async () => {
-        clearSimTimer();
-        let currentSamples = samples;
-        if (currentSamples.length === 0) {
-            try {
-                currentSamples = await fetchSimulationSamples();
-                setSamples(currentSamples);
-            } catch (err) {
-                console.error("Failed to load simulation samples:", err);
-                return;
-            }
-        }
-
-        if (simulationState === "paused") {
-            setSimulationState("running");
-            // Schedule next step from current index + 1
-            if (currentIndex + 1 < currentSamples.length) {
-                timerRef.current = setTimeout(async () => {
-                    const nextIdx = currentIndex + 1;
-                    setCurrentIndex(nextIdx);
-                    await processSampleAtIndex(nextIdx, currentSamples);
-                }, delaySeconds * 1000);
-            } else {
-                setSimulationState("completed");
-            }
-        } else {
-            // Fresh start or restart
-            await resetBackendSession("simulation_session");
-            setCurrentIndex(0);
-            setSimulationState("running");
-            await processSampleAtIndex(0, currentSamples);
-        }
-    }, [clearSimTimer, currentIndex, delaySeconds, processSampleAtIndex, samples, simulationState]);
-
-    const handlePauseSimulation = useCallback(() => {
-        clearSimTimer();
-        setSimulationState("paused");
-    }, [clearSimTimer]);
-
-    const handleNextSimulation = useCallback(async () => {
-        clearSimTimer();
-        if (currentIndex + 1 < samples.length) {
-            const nextIdx = currentIndex + 1;
-            setCurrentIndex(nextIdx);
-            await processSampleAtIndex(nextIdx, samples);
-        } else {
-            setSimulationState("completed");
-        }
-    }, [clearSimTimer, currentIndex, processSampleAtIndex, samples]);
-
-    const handleResetSimulation = useCallback(async () => {
-        clearSimTimer();
-        await resetBackendSession("simulation_session");
-        setCurrentIndex(0);
-        setSimulationState("idle");
-        setAnalysis(null);
-    }, [clearSimTimer]);
-
-    /* Auto-advance effect when simulationState === "running" and processing completes */
-    useEffect(() => {
-        if (simulationState === "running" && !isProcessing && samples.length > 0) {
-            if (currentIndex < samples.length - 1) {
-                timerRef.current = setTimeout(async () => {
-                    const nextIdx = currentIndex + 1;
-                    setCurrentIndex(nextIdx);
-                    await processSampleAtIndex(nextIdx, samples);
-                }, delaySeconds * 1000);
-            } else {
-                setSimulationState("completed");
-            }
-        }
-        return () => clearSimTimer();
-    }, [simulationState, isProcessing, currentIndex, samples, delaySeconds, processSampleAtIndex, clearSimTimer]);
+    const clearSimTimer = useCallback(() => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } }, []);
+    const handleStartSimulation = useCallback(async () => { clearSimTimer(); let currentSamples = samples; if (!currentSamples.length) { try { currentSamples = await fetchSimulationSamples(); setSamples(currentSamples); } catch (err) { console.error(err); return; } } if (simulationState === "paused") { setSimulationState("running"); } else { await resetBackendSession("simulation_session"); setCurrentIndex(0); setSimulationState("running"); await processSampleAtIndex(0, currentSamples); } }, [clearSimTimer, processSampleAtIndex, samples, simulationState]);
+    const handlePauseSimulation = useCallback(() => { clearSimTimer(); setSimulationState("paused"); }, [clearSimTimer]);
+    const handleNextSimulation = useCallback(async () => { clearSimTimer(); if (currentIndex + 1 < samples.length) { const nextIdx = currentIndex + 1; setCurrentIndex(nextIdx); await processSampleAtIndex(nextIdx, samples); } else setSimulationState("completed"); }, [clearSimTimer, currentIndex, processSampleAtIndex, samples]);
+    const handleResetSimulation = useCallback(async () => { clearSimTimer(); await resetBackendSession("simulation_session"); setCurrentIndex(0); setSimulationState("idle"); setAnalysis(null); }, [clearSimTimer]);
+    useEffect(() => { if (simulationState === "running" && !isProcessing && samples.length > 0) { if (currentIndex < samples.length - 1) { timerRef.current = setTimeout(async () => { const nextIdx = currentIndex + 1; setCurrentIndex(nextIdx); await processSampleAtIndex(nextIdx, samples); }, delaySeconds * 1000); } else setSimulationState("completed"); } return () => clearSimTimer(); }, [simulationState, isProcessing, currentIndex, samples, delaySeconds, processSampleAtIndex, clearSimTimer]);
 
     const emotion = analysis?.emotion;
-    const driver  = analysis?.driver_analysis;
+    const driver = analysis?.driver_analysis;
     const currentSample = samples[currentIndex] || null;
 
     return (
-        <div className="flex min-h-screen" style={{ background: "#09090B" }}>
-
-            <Sidebar
-                sessions={sessions}
-                activeSessionId={activeSessionId}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onNewAnalysis={handleNewAnalysis}
-                onSelectSession={handleSelectSession}
-                onDeleteSession={handleDeleteSession}
-                onRenameSession={handleRenameSession}
-            />
-
-            <main className="flex-1 min-w-0 overflow-y-auto">
-
-                {/* ── Top bar ── */}
-                <div className="sticky top-0 z-10 px-12 py-6 flex items-center justify-between"
-                    style={{
-                        background: "rgba(9,9,11,0.85)",
-                        backdropFilter: "blur(24px)",
-                        WebkitBackdropFilter: "blur(24px)",
-                        borderBottom: "1px solid rgba(255,255,255,0.04)"
-                    }}
-                >
-                    <div>
-                        <h1 className="text-2xl font-extrabold text-white tracking-tight">
-                            PitSense
-                        </h1>
-                        <p className="text-[13px] mt-0.5" style={{ color: "#52525B" }}>
-                            AI-Powered Race Intelligence — Driver Communication & Telemetry Analysis
-                        </p>
+        <div className="dashboard-shell">
+            <Sidebar sessions={sessions} activeSessionId={activeSessionId} searchQuery={searchQuery} onSearchChange={setSearchQuery} onNewAnalysis={handleNewAnalysis} onSelectSession={handleSelectSession} onDeleteSession={handleDeleteSession} onRenameSession={handleRenameSession} />
+            <main className="dashboard-main">
+                <section className="hero-panel">
+                    <div className="hero-bg" />
+                    <div className="hero-overlay" />
+                    <div className="hero-topbar">
+                        <span className="live-pill"><i /> Pipeline Active</span>
+                        <div className="hero-time"><b>21:45:32 IST</b><small>May 24, 2025</small></div>
+                        <button className="icon-btn" aria-label="Theme"><Sparkles size={18} /></button>
                     </div>
-
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-full"
-                        style={{
-                            background: "rgba(48,209,88,0.06)",
-                            border: "1px solid rgba(48,209,88,0.1)"
-                        }}
-                    >
-                        <div className="w-1.5 h-1.5 rounded-full animate-pulse"
-                            style={{ background: "#30D158", boxShadow: "0 0 6px #30D158" }} />
-                        <span className="text-[11px] font-semibold" style={{ color: "#30D158" }}>
-                            Pipeline Active
-                        </span>
+                    <div className="hero-content">
+                        <div className="hero-copy">
+                            <div className="brand-wordmark"><span>PIT</span>SENSE</div>
+                            <div className="hero-kicker">AI-Powered Race Intelligence</div>
+                            <p>Transforming driver radio into real-time<br />insights, emotional intelligence, and<br />winning strategies.</p>
+                            <div className="hero-actions"><button className="primary-btn" onClick={handleNewAnalysis}><Radio size={18} /> Start New Analysis</button><button className="secondary-btn" onClick={() => document.getElementById("sessions-anchor")?.scrollIntoView({ behavior: "smooth" })}><MessageSquare size={17} /> View Sessions</button></div>
+                        </div>
+                        {analysis ? <div className="live-insight glass-card"><div className="section-head"><span>Live Insight</span><b>● LIVE</b></div><div className="waveform"><div className="wave-track" />{Array.from({ length: 42 }).map((_, i) => <i key={i} style={{ height: `${10 + ((i * 17) % 42)}px` }} />)}</div><p>“{String(analysis.transcript || analysis.engineer_reply || "Driver communication detected.").slice(0, 90)}”</p><div className="live-stress"><span>Driver Stress</span><b>{Math.round(analysis?.stress_index?.stress_index ?? analysis?.driver_analysis?.stress ?? 0)}%</b></div><div className="live-progress"><i style={{ width: `${Math.min(100, analysis?.stress_index?.stress_index ?? analysis?.driver_analysis?.stress ?? 0)}%` }} /></div></div> : <div className="live-insight glass-card"><div className="section-head"><span>Live Insight</span><b>● STANDBY</b></div><div className="waveform muted">{Array.from({ length: 42 }).map((_, i) => <i key={i} style={{ height: `${8 + ((i * 11) % 26)}px` }} />)}</div><p>Upload a radio clip to see PitSense turn driver communication into actionable race intelligence.</p><div className="live-stress"><span>Driver Stress</span><b>--</b></div><div className="live-progress"><i style={{ width: "8%" }} /></div></div>}
                     </div>
-                </div>
+                </section>
 
-                {/* ── Content ── */}
-                <div className="px-12 py-10 space-y-8">
-
-                    {/* Simulation Controls Component */}
-                    <SimulationControls
-                        mode={mode}
-                        setMode={setMode}
-                        simulationState={simulationState}
-                        onStart={handleStartSimulation}
-                        onPause={handlePauseSimulation}
-                        onNext={handleNextSimulation}
-                        onReset={handleResetSimulation}
-                        delaySeconds={delaySeconds}
-                        setDelaySeconds={setDelaySeconds}
-                        currentIndex={currentIndex}
-                        totalSamples={samples.length}
-                        currentSample={currentSample}
-                        isProcessing={isProcessing}
-                    />
-
-                    {/* Stat cards (visible after analysis) */}
-                    {analysis && driver && emotion && (
-                        <div className="grid grid-cols-4 gap-5">
-                            <StatCard
-                                icon={Brain}
-                                label="Emotion"
-                                value={emotion.emotion || "Nominal"}
-                                color="#BF5AF2"
-                                delay={0}
-                            />
-                            <StatCard
-                                icon={Activity}
-                                label="Driver State"
-                                value={driver.driver_state || "Calm"}
-                                color="#0A84FF"
-                                delay={60}
-                            />
-                            <StatCard
-                                icon={Zap}
-                                label="Stress"
-                                value={`${driver.stress || 0}%`}
-                                color={getStatColor("stress", driver.stress || 0)}
-                                delay={120}
-                            />
-                            <StatCard
-                                icon={TrendingUp}
-                                label="Urgency"
-                                value={`${driver.urgency || 0}%`}
-                                color={getStatColor("urgency", driver.urgency || 0)}
-                                delay={180}
-                            />
+                <div className="content-wrap">
+                    <section className="section-block">
+                        <div className="section-title"><span /> SYSTEM OVERVIEW</div>
+                        <div className="module-grid">
+                            <ModuleCard icon={Activity} title="ASR Engine" subtitle="Parakeet TDT 0.6B" color="#1490ff" visual="wave" />
+                            <ModuleCard icon={Radio} title="Audio Emotion" subtitle="Wav2Vec2 XLSR" color="#8b4dff" />
+                            <ModuleCard icon={Brain} title="Text Emotion" subtitle="DistilRoBERTa" color="#ff8a00" visual="wave" />
+                            <ModuleCard icon={Gauge} title="Driver State" subtitle="Intelligence Engine" color="#18b8da" visual="orbit" />
+                            <ModuleCard icon={Flag} title="Recommendations" subtitle="Race Engineer AI" color="#3cd05f" visual="wave" />
+                            <ModuleCard icon={Sparkles} title="Gemini AI" subtitle="Strategic Advisor" color="#ff2093" visual="wave" />
                         </div>
-                    )}
+                    </section>
 
-                    {/* Upload card (Manual Mode) */}
-                    {mode === "manual" && (
-                        <UploadCard key={uploadKey} setAnalysis={handleAnalysis} />
-                    )}
+                    {analysis && driver && emotion && <div className="four-stat-row">{[
+                        [Brain, "Emotion", emotion.emotion || "Nominal", "#bf5af2"],
+                        [Activity, "Driver State", driver.driver_state || "Calm", "#0a84ff"],
+                        [Zap, "Stress", `${driver.stress || analysis?.stress_index?.stress_index || 0}%`, getStatColor("stress", driver.stress || analysis?.stress_index?.stress_index || 0)],
+                        [TrendingUp, "Urgency", `${driver.urgency || 0}%`, getStatColor("urgency", driver.urgency || 0)]
+                    ].map(([Icon, label, value, color]) => <div className="compact-stat glass-card" key={label}><span className="compact-label">{label}</span><span className="compact-icon" style={{ color, background: `${color}13`, borderColor: `${color}28` }}><Icon size={17} /></span><strong style={{ color }}>{value}</strong></div>)}</div>}
 
-                    {/* Driver Status + Transcript */}
-                    {analysis && (
-                        <div className="grid grid-cols-2 gap-6">
-                            <EmotionCard analysis={analysis} />
-                            <TranscriptCard analysis={analysis} />
-                        </div>
-                    )}
+                    {analysis == null && <div className="analysis-placeholder glass-card"><UploadCard key={uploadKey} setAnalysis={handleAnalysis} /></div>}
+                    {mode === "simulation" && <SimulationControls mode={mode} setMode={setMode} simulationState={simulationState} onStart={handleStartSimulation} onPause={handlePauseSimulation} onNext={handleNextSimulation} onReset={handleResetSimulation} delaySeconds={delaySeconds} setDelaySeconds={setDelaySeconds} currentIndex={currentIndex} totalSamples={samples.length} currentSample={currentSample} isProcessing={isProcessing} />}
 
-                    {/* Race Telemetry Card */}
+                    {analysis && <div className="analysis-grid"><OverviewCard analysis={analysis} /><StressCard analysis={analysis} /><RecommendationCard analysis={analysis} /></div>}
+
+                    {analysis && <div className="support-grid"><EmotionCard analysis={analysis} /><TranscriptCard analysis={analysis} /></div>}
                     {analysis && <TelemetryCard analysis={analysis} />}
-
-                    {/* Engineer Decision Support Engine Card */}
                     {analysis && <DecisionCard analysis={analysis} />}
-
-                    {/* AI Race Engineer Report */}
                     <AISummary analysis={analysis} />
+                    <div id="sessions-anchor"><EngineerChat session={activeSession} onUpdateChat={handleUpdateChat} /></div>
 
-                    {/* Ask the Race Engineer Chat */}
-                    <EngineerChat session={activeSession} onUpdateChat={handleUpdateChat} />
-
+                    <section className="metrics-strip glass-card"><div><span>Lap Time</span><b>1:24.532</b></div><div><span>Best Lap</span><b>1:22.847</b></div><div><span>Current Lap</span><b>32 / 58</b></div><div><span>Gap to Leader</span><b className="warn">+4.532s</b></div><div><span>Tyre Condition</span><b className="danger">23%</b></div><div><span>Fuel Load</span><b className="danger">18.6 L</b></div><div><span>Track Temp</span><b className="danger">42°C</b></div><div><span>Air Temp</span><b>28°C</b></div></section>
                 </div>
-
             </main>
-
         </div>
     );
 }
