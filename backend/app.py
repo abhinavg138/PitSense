@@ -65,11 +65,10 @@ if os.path.exists(DATASET_AUDIO_DIR):
     app.mount("/dataset/audio", StaticFiles(directory=DATASET_AUDIO_DIR), name="dataset_audio")
 
 UPLOAD_FOLDER = "uploads"
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-@app.get("/", response_class=RedirectResponse)
+@app.get("/")
 def home():
     return RedirectResponse(url="/admin/", status_code=307)
 
@@ -112,10 +111,7 @@ def health_check():
     else:
         overall_status = "READY"
 
-    return {
-        "status": overall_status,
-        "components": components
-    }
+    return {"status": overall_status, "components": components}
 
 
 @app.get("/admin/api/overview")
@@ -123,12 +119,10 @@ def admin_overview(diagnostic: bool = False):
     """Read-only operational data for the local PitSense Control Center."""
     dataset_ready = os.path.exists(DATASET_AUDIO_DIR)
     telemetry_ready = bool(load_dataset_metadata())
-    gemini_configured = bool(
-        os.environ.get("GEMINI_API_KEY", "").strip()
-        and os.environ.get("GEMINI_API_KEY", "") != "YOUR_GEMINI_API_KEY"
-    )
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    gemini_configured = bool(gemini_key.strip() and gemini_key != "YOUR_GEMINI_API_KEY")
 
-    asr_loaded = bool(getattr(asr_model, "asr", None))
+    asr_loaded = getattr(asr_model, "asr", None) is not None
     audio_loaded = getattr(audio_emotion, "_pipe", None) is not None
     text_loaded = getattr(emotion_model, "emotion_pipeline", None) is not None
 
@@ -162,6 +156,7 @@ def admin_overview(diagnostic: bool = False):
         latest = observations[-1] if observations else None
         if latest:
             latest_observation = latest
+        telemetry = (latest.get("telemetry") or {}) if latest else {}
         sessions.append({
             "session_id": session_id,
             "observation_count": len(observations),
@@ -170,7 +165,7 @@ def admin_overview(diagnostic: bool = False):
             "latest_stress_state": latest.get("stress_state") if latest else None,
             "latest_lap": latest.get("lap") if latest else None,
             "latest_lap_time": latest.get("lap_time_seconds") if latest else None,
-            "telemetry_available": bool(latest and latest.get("telemetry", {}).get("available")),
+            "telemetry_available": bool(telemetry.get("available")),
         })
 
     diagnostics = {
@@ -202,39 +197,30 @@ def admin_overview(diagnostic: bool = False):
             "telemetry": diagnostics["telemetry"],
             "gemini": diagnostics["gemini"],
         },
-        "diagnostics": diagnostics if diagnostic else diagnostics,
+        "diagnostics": diagnostics,
         "models": model_status,
         "sessions": sessions,
         "active_session": getattr(session_manager, "_active_session_id", None),
         "latest_observation": latest_observation,
-        "runtime": {
-            "python": platform.python_version(),
-            "platform": platform.platform(),
-        },
+        "runtime": {"python": platform.python_version(), "platform": platform.platform()},
     }
 
 
 @app.get("/dataset/validate")
 def validate_dataset():
-    """
-    Validation endpoint to verify dataset loading for expected samples.
-    """
+    """Validation endpoint to verify dataset loading for expected samples."""
     return run_dataset_validation()
 
 
 @app.get("/simulation/samples")
 def list_simulation_samples():
-    """
-    Returns available dataset observations for simulation mode, dynamically discovered.
-    """
+    """Returns available dataset observations for simulation mode."""
     return get_simulation_samples()
 
 
 @app.get("/simulation/audio/{filename}")
 def get_simulation_audio(filename: str):
-    """
-    Returns audio file for simulation playback.
-    """
+    """Returns audio file for simulation playback."""
     path = os.path.join(DATASET_AUDIO_DIR, filename)
     if not os.path.exists(path):
         path = os.path.join(UPLOAD_FOLDER, filename)
@@ -258,15 +244,15 @@ async def upload_audio(
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        perception      = transcribe_and_perceive(filepath)
-        transcript      = perception["transcript"]
-        audio_emotion   = perception["audio_emotion"]
+        perception = transcribe_and_perceive(filepath)
+        transcript = perception["transcript"]
+        audio_emotion = perception["audio_emotion"]
         speech_features = perception["speech_features"]
 
-        emotion      = analyze_emotion(transcript)
+        emotion = analyze_emotion(transcript)
         driver_state = analyze_driver_state(transcript, emotion)
         stress_index = compute_stress_index(audio_emotion, speech_features, transcript)
-        ai_brief     = generate_summary_with_source(transcript, emotion, driver_state)
+        ai_brief = generate_summary_with_source(transcript, emotion, driver_state)
 
         active_session_id = session_id or x_session_id or session or "default_session"
         raw_telemetry = get_telemetry_for_file(file.filename)
@@ -303,17 +289,17 @@ async def upload_audio(
         history = session_manager.get_history(active_session_id)
         telemetry_series = build_telemetry_series(history)
 
-        temporal_analysis   = analyze_temporal_session(history)
-        lap_performance     = analyze_lap_performance(history)
+        temporal_analysis = analyze_temporal_session(history)
+        lap_performance = analyze_lap_performance(history)
         engineering_insight = generate_engineering_insight(temporal_analysis, lap_performance, driver_state)
-        engineer_decision   = evaluate_engineer_decision(
+        engineer_decision = evaluate_engineer_decision(
             driver_state=driver_state,
             stress_index=stress_index,
             temporal_analysis=temporal_analysis,
             audio_emotion=audio_emotion,
             transcript=transcript,
         )
-        actionable_insight  = generate_actionable_insight(
+        actionable_insight = generate_actionable_insight(
             driver_state=driver_state,
             stress_index=stress_index,
             audio_emotion=audio_emotion,
