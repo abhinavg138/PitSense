@@ -1,6 +1,5 @@
 import Sidebar from "../components/common/Sidebar";
 import UploadCard from "../components/upload/UploadCard";
-import TranscriptCard from "../components/dashboard/TranscriptCard";
 import EmotionCard from "../components/dashboard/EmotionCard";
 import AISummary from "../components/dashboard/AISummary";
 import TelemetryCard from "../components/dashboard/TelemetryCard";
@@ -102,7 +101,7 @@ export default function Dashboard() {
             {!analysis && <div className="analysis-placeholder glass-card"><UploadCard key={uploadKey} setAnalysis={handleAnalysis} /></div>}
             {mode === "simulation" && <SimulationControls mode={mode} setMode={setMode} simulationState={simulationState} onStart={handleStartSimulation} onPause={handlePauseSimulation} onNext={handleNextSimulation} onReset={handleResetSimulation} delaySeconds={delaySeconds} setDelaySeconds={setDelaySeconds} currentIndex={currentIndex} totalSamples={samples.length} currentSample={currentSample} isProcessing={isProcessing} />}
             {analysis && <div className="analysis-grid"><OverviewCard analysis={analysis}/><StressCard analysis={analysis}/><RecommendationCard analysis={analysis}/></div>}
-            {analysis && <div className="support-grid"><EmotionCard analysis={analysis}/><TranscriptCard analysis={analysis}/></div>}
+            {analysis && <div className="support-grid"><EmotionCard analysis={analysis}/></div>}
             {analysis && <><TelemetryCard analysis={analysis}/><DecisionCard analysis={analysis}/></>}
             <AISummary analysis={analysis}/><div id="sessions-anchor"><EngineerChat session={activeSession} onUpdateChat={handleUpdateChat}/></div>
             <section className="metrics-strip glass-card"><div><span>Lap Time</span><b>1:24.532</b></div><div><span>Best Lap</span><b>1:22.847</b></div><div><span>Current Lap</span><b>32 / 58</b></div><div><span>Gap to Leader</span><b className="warn">+4.532s</b></div><div><span>Tyre Condition</span><b className="danger">23%</b></div><div><span>Fuel Load</span><b className="danger">18.6 L</b></div><div><span>Track Temp</span><b className="danger">42°C</b></div><div><span>Air Temp</span><b>28°C</b></div></section></div>
