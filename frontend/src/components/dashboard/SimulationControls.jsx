@@ -5,6 +5,7 @@ export default function SimulationControls({
     mode,
     setMode,
     simulationState,
+    simSessionId,
     onStart,
     onPause,
     onNext,
@@ -23,24 +24,31 @@ export default function SimulationControls({
                 background: "rgba(255, 255, 255, 0.04)",
                 backdropFilter: "blur(24px)",
                 WebkitBackdropFilter: "blur(24px)",
-                border: "1px solid rgba(255, 255, 255, 0.06)",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                border: "1px solid rgba(10, 132, 255, 0.25)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 0 24px rgba(10, 132, 255, 0.05)",
             }}
         >
             <div className="flex items-center justify-between flex-wrap gap-4 pb-4 mb-4 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <div
                         className="w-10 h-10 rounded-2xl flex items-center justify-center"
-                        style={{ background: "rgba(10,132,255,0.12)", border: "1px solid rgba(10,132,255,0.25)" }}
+                        style={{ background: "rgba(10,132,255,0.15)", border: "1px solid rgba(10,132,255,0.35)" }}
                     >
-                        <Radio size={18} className="text-blue-400" />
+                        <Radio size={18} className="text-blue-400 animate-pulse" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-white tracking-tight">
-                            Race Operation Mode
-                        </h2>
-                        <p className="text-[11px] text-zinc-400">
-                            Switch between Manual Audio Upload and Dynamic Race Simulation Replay
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-white tracking-tight">
+                                Race Simulation Engine
+                            </h2>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                                ● RACE SIMULATION
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 flex items-center gap-2 mt-0.5">
+                            <span>Isolated Session: <b className="text-zinc-200 font-mono">{simSessionId || "simulation_session"}</b></span>
+                            <span>•</span>
+                            <span>Chronological F1 Dataset Replay</span>
                         </p>
                     </div>
                 </div>

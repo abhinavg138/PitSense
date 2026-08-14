@@ -1,12 +1,13 @@
 import { Timer, Gauge, Radio, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import PerformanceGraph from "./PerformanceGraph";
+import ProvenanceBadge from "../common/ProvenanceBadge";
 import {
     formatNumber,
     getCurrentTelemetry,
     normalizeTelemetrySeries,
 } from "../../utils/telemetry";
 
-function MetricBox({ label, value, unit = "", accent = "#0A84FF" }) {
+function MetricBox({ label, value, unit = "", accent = "#0A84FF", provenance = "DATASET" }) {
     const hasValue = value !== null && value !== undefined;
 
     return (
@@ -17,9 +18,12 @@ function MetricBox({ label, value, unit = "", accent = "#0A84FF" }) {
                 border: `1px solid ${hasValue ? accent + "20" : "rgba(255,255,255,0.05)"}`,
             }}
         >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "#52525B" }}>
-                {label}
-            </p>
+            <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "#52525B" }}>
+                    {label}
+                </p>
+                <ProvenanceBadge type={hasValue ? provenance : "UNAVAILABLE"} />
+            </div>
             {hasValue ? (
                 <p className="text-xl font-extrabold tracking-tight tabular-nums" style={{ color: accent }}>
                     {value}

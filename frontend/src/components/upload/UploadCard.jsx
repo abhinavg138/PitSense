@@ -95,7 +95,7 @@ function createDemoAudioFile() {
     return new File([blob], `voice-memo-demo-${Date.now()}.wav`, { type: "audio/wav" });
 }
 
-export default function UploadCard({ setAnalysis }) {
+export default function UploadCard({ setAnalysis, sessionId, onSessionCreated }) {
 
     const fileInputRef = useRef(null);
     const audioURLRef = useRef(null);
@@ -137,8 +137,15 @@ export default function UploadCard({ setAnalysis }) {
         audioURLRef.current = url;
         setAudioURL(url);
 
+        let currentSessionId = sessionId;
+        if (!currentSessionId) {
+            currentSessionId = `session_${Date.now()}`;
+            if (onSessionCreated) onSessionCreated(currentSessionId);
+        }
+
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("session_id", currentSessionId);
 
         try {
             setUploading(true);
@@ -164,7 +171,7 @@ export default function UploadCard({ setAnalysis }) {
 
             await new Promise(r => setTimeout(r, 300));
 
-            setAnalysis(response.data);
+            setAnalysis(response.data, currentSessionId);
             setTranscript(response.data.transcript);
 
             setActiveStep(4);

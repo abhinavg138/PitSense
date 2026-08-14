@@ -159,6 +159,8 @@ def evaluate_engineer_decision(
 
     # 4. Construct Decision Evidence Block
     temp_dq = temporal_analysis.get("data_quality", {})
+    speech_signal = (stress_index.get("stress_signals", {}) or {}).get("speech") if isinstance(stress_index, dict) else None
+
     evidence = {
         "reasons": reasons,
         "stress_trajectory": temporal_analysis.get("stress_history", [int(stress_val)]),
@@ -170,8 +172,10 @@ def evaluate_engineer_decision(
         "association": temporal_analysis.get("association", "Building temporal picture…"),
         "data_quality": {
             "transcript": "AVAILABLE" if transcript else "UNAVAILABLE",
-            "audio_emotion": "AVAILABLE" if audio_emotion.get("confidence") is not None else "UNAVAILABLE",
+            "audio_emotion": "AVAILABLE" if (audio_emotion and audio_emotion.get("confidence") is not None) else "UNAVAILABLE",
+            "acoustic_analysis": "AVAILABLE" if speech_signal is not None else "UNAVAILABLE",
             "telemetry": temp_dq.get("telemetry", "UNAVAILABLE"),
+            "temporal_history": "AVAILABLE" if sample_count >= 2 else ("PARTIAL" if sample_count == 1 else "UNAVAILABLE"),
             "correlation": temp_dq.get("correlation", "UNAVAILABLE" if sample_count < 1 else "INSUFFICIENT" if sample_count < 3 else "AVAILABLE"),
         }
     }

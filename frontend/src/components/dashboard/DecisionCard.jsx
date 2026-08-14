@@ -1,4 +1,7 @@
-import { Activity, AlertTriangle, ShieldCheck, TrendingUp, Cpu, CheckCircle2, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Activity, AlertTriangle, ShieldCheck, TrendingUp, Cpu, CheckCircle2, ArrowRight, HelpCircle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import WhyDecisionPanel from "./WhyDecisionPanel";
+import ProvenanceBadge from "../common/ProvenanceBadge";
 
 /* ── Severity Helpers ── */
 function getSeverityBadge(severity) {
@@ -15,12 +18,13 @@ function getSeverityBadge(severity) {
 }
 
 export default function DecisionCard({ analysis }) {
+    const [showWhyPanel, setShowWhyPanel] = useState(false);
+
     if (!analysis) return null;
 
     const temporal = analysis.temporal_analysis || {};
     const decision = analysis.engineer_decision || {};
     const dataQuality = (decision.evidence && decision.evidence.data_quality) || (temporal.data_quality) || {};
-
 
     const sampleCount = temporal.sample_count || temporal.observation_count || 1;
     const badge = getSeverityBadge(decision.severity || "CALM");
@@ -60,6 +64,7 @@ export default function DecisionCard({ analysis }) {
                     <div>
                         <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
                             Engineer Decision Support Engine
+                            <ProvenanceBadge type="MODEL" />
                         </h2>
                         <p className="text-[11px]" style={{ color: "#71717A" }}>
                             Phase 8 — Authoritative Deterministic Race Engineering
@@ -80,14 +85,17 @@ export default function DecisionCard({ analysis }) {
 
             {/* Decision Hero Block */}
             <div
-                className="p-6 rounded-2xl mb-6"
+                className="p-6 rounded-2xl mb-6 relative overflow-hidden"
                 style={{ background: `${badge.color}08`, border: `1px solid ${badge.color}20` }}
             >
                 <div className="flex items-start justify-between">
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] mb-1" style={{ color: "#71717A" }}>
-                            Recommended Engineer Decision
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "#71717A" }}>
+                                Recommended Engineer Decision
+                            </p>
+                            <ProvenanceBadge type="MODEL" />
+                        </div>
                         <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: badge.color }}>
                             {decisionName}
                         </h3>
@@ -96,36 +104,60 @@ export default function DecisionCard({ analysis }) {
                         </p>
                     </div>
                     <div className="text-right shrink-0 ml-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#71717A" }}>Engine Confidence</p>
+                        <div className="flex items-center justify-end gap-1.5 mb-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#71717A" }}>Engine Confidence</p>
+                            <ProvenanceBadge type="MODEL" />
+                        </div>
                         <p className="text-2xl font-extrabold tabular-nums" style={{ color: badge.color }}>
                             {Math.round((decision.confidence || 0.85) * 100)}%
                         </p>
                     </div>
                 </div>
 
-                {/* Decision Reasons (WHY?) */}
-                {reasons.length > 0 && (
-                    <div className="mt-4 pt-4 space-y-1.5" style={{ borderTop: `1px solid ${badge.color}15` }}>
-                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-300">
-                            WHY? (Backend Deterministic Reasons)
-                        </p>
-                        {reasons.map((r, i) => (
-                            <p key={i} className="text-xs flex items-center gap-2 text-zinc-300">
-                                <span style={{ color: badge.color }}>•</span> {r}
-                            </p>
-                        ))}
-                    </div>
-                )}
+                {/* PROMINENT "WHY THIS DECISION?" BUTTON */}
+                <div className="mt-5 pt-4 flex items-center justify-between" style={{ borderTop: `1px solid ${badge.color}18` }}>
+                    <button
+                        type="button"
+                        onClick={() => setShowWhyPanel(!showWhyPanel)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200"
+                        style={{
+                            background: showWhyPanel ? badge.color : `${badge.color}20`,
+                            color: showWhyPanel ? "#000000" : "#FFFFFF",
+                            border: `1px solid ${badge.color}40`,
+                            boxShadow: showWhyPanel ? `0 0 16px ${badge.color}40` : "none",
+                        }}
+                    >
+                        <HelpCircle size={15} />
+                        WHY THIS DECISION?
+                        {showWhyPanel ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                    </button>
+
+                    <span className="text-[11px] font-medium text-zinc-400 flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-blue-400" />
+                        Deterministic Rule-Based Evidence
+                    </span>
+                </div>
             </div>
 
+            {/* Expandable Why This Decision Panel */}
+            {showWhyPanel && (
+                <WhyDecisionPanel
+                    analysis={analysis}
+                    onClose={() => setShowWhyPanel(false)}
+                />
+            )}
+
             {/* Temporal Metrics Grid */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 mt-6">
 
                 {/* Card A: Stress Trend */}
                 <div className="p-4 rounded-2xl" style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#71717A" }}>
-                        Stress Trend
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#71717A" }}>
+                            Stress Trend
+                        </p>
+                        <ProvenanceBadge type="MODEL" />
+                    </div>
                     {sampleCount >= 2 && stressHistory.length > 0 ? (
                         <div>
                             <div className="flex items-center gap-1 text-xs font-semibold tabular-nums mb-2 text-zinc-300">
@@ -133,7 +165,7 @@ export default function DecisionCard({ analysis }) {
                                     <span key={idx} className="flex items-center gap-1">
                                         {idx > 0 && <ArrowRight size={10} style={{ color: "#52525B" }} />}
                                         <span style={{ color: s >= 70 ? "#FF453A" : s >= 50 ? "#FF9F0A" : "#30D158" }}>
-                                            {s}
+                                            {Math.round(s)}
                                         </span>
                                     </span>
                                 ))}
@@ -155,9 +187,12 @@ export default function DecisionCard({ analysis }) {
 
                 {/* Card B: Lap Time Delta */}
                 <div className="p-4 rounded-2xl" style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#71717A" }}>
-                        Lap Time vs Baseline
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#71717A" }}>
+                            Lap Time vs Baseline
+                        </p>
+                        <ProvenanceBadge type={lapTime !== null && lapTime !== undefined ? "DATASET" : "UNAVAILABLE"} />
+                    </div>
                     {lapTime !== null && lapTime !== undefined ? (
                         <div>
                             <p className="text-base font-extrabold text-white tabular-nums">
@@ -174,9 +209,12 @@ export default function DecisionCard({ analysis }) {
 
                 {/* Card C: Observed Association */}
                 <div className="p-4 rounded-2xl" style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "#71717A" }}>
-                        Observed Association
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#71717A" }}>
+                            Observed Association
+                        </p>
+                        <ProvenanceBadge type={correlation !== null && correlation !== undefined ? "MODEL" : "UNAVAILABLE"} />
+                    </div>
                     {correlation !== null && correlation !== undefined ? (
                         <div>
                             <p className="text-base font-extrabold tabular-nums" style={{ color: "#0A84FF" }}>
@@ -204,7 +242,7 @@ export default function DecisionCard({ analysis }) {
                     {Object.entries({
                         Transcript: dataQuality.transcript || "AVAILABLE",
                         Emotion: dataQuality.audio_emotion || "AVAILABLE",
-                        Telemetry: dataQuality.telemetry || "UNAVAILABLE",
+                        Telemetry: dataQuality.telemetry || (analysis.telemetry?.available ? "AVAILABLE" : "UNAVAILABLE"),
                         Correlation: dataQuality.correlation || (sampleCount < 3 ? "INSUFFICIENT" : "AVAILABLE")
                     }).map(([domain, state]) => {
                         const style = state === "AVAILABLE" ? { color: "#30D158", bg: "rgba(48, 209, 88, 0.12)" }
@@ -222,4 +260,3 @@ export default function DecisionCard({ analysis }) {
         </div>
     );
 }
-
